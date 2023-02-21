@@ -1,0 +1,46 @@
+.timeline {
+  display: flex;
+  justify-content: space-between;
+  margin: 20px 0;
+}
+
+.timeline-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.timeline-progress {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  border: 2px solid #ccc;
+  margin-bottom: 10px;
+}
+
+.timeline-progress.active {
+  background-color: #00695c;
+  border-color: #00695c;
+}
+
+.timeline-label {
+  text-align: center;
+}
+
+.timeline-description {
+  display: none;
+  position: absolute;
+  bottom: -30px;
+  left: -50%;
+  width: 200%;
+  padding: 5px;
+  background-color: #00695c;
+  color: #fff;
+  border-radius: 5px;
+}
+
+.timeline-step:hover .timeline-description {
+  display: block;
+}

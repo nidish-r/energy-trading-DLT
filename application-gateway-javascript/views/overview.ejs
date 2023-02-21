@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <style>
+        table, th, td {
+          border: 1px solid;
+        }
+    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Simulation</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/product.css">
+    <link rel="stylesheet" href="/css/timeline.css">
+</head>
+
+<body>
+    <header class="main-header">
+        <nav class="main-header__nav">
+            <form class="centered" action="/" method="POST">
+                <button class="btn" type="submit">Run Simulation</button>
+            </form>
+        </nav>
+    </header>
+
+    <main>
+        <h3>Process Flow</h3>
+    </script>
+    <div class="timeline">
+        <% for (var i = 1; i <= 13; i++) { %>
+          <div class="timeline-step">
+            <div class="timeline-progress<%= i <= locals.progress ? ' active' : '' %>"></div>
+            <div class="timeline-label">
+              <%= locals.labels[i-1] %>
+            </div>
+          </div>
+        <% } %>
+    </div>
+    <% if (locals.phaseArray == undefined) { %>
+    <% } else { %>
+    <% if (locals.phaseArray == undefined) { %>
+    <% } else if (locals.simulationObject != undefined) { %>
+    <h3>Dashboard</h3>
+    <h4>DLT Method Calls</h4>
+    <% for (var i = 0; i < locals.functionCalls.length; i++) { %>
+        <p><%= "[" + i + "]" + ": "+ locals.functionCalls[i] %></p>
+    <% } %>
+    <div class="split left">
+        <link href="/css/split-screen.css" rel="stylesheet" type="text/css">
+        <div class="centered">
+            <h4>Swapping Networks</h4>
+                <% if (locals.simulationObject.swappingNetworks.length != 0) { %>
+                <table>
+                    <tr>
+                        <th>Network Name</th> 
+                        <th>Network ID</th> 
+                        <th>Total Batteries</th> 
+                        <th>Status</th> 
+                        <th>Wallet</th>
+                    </tr>
+                    <% for (var i = 0; i < locals.simulationObject.swappingNetworks.length; i++) { %>
+                    <tr>
+                        <td><%= locals.simulationObject.swappingNetworks[i][0] %></td>
+                        <td><%= locals.simulationObject.swappingNetworks[i][1] %></td>
+                        <td><%= locals.simulationObject.swappingNetworks[i][2] %></td>
+                        <td><%= locals.simulationObject.swappingNetworks[i][3] %></td>
+                        <td><%= locals.simulationObject.swappingNetworks[i][4] %></td>
+                    </tr>
+                    <% } %>
+                </table>
+                <% } %>
+            <h4>Swapping Stations</h4>
+                <% if (locals.simulationObject.swappingStations.length != 0) { %>
+                <table>
+                    <tr>
+                        <th>SS Name</th>
+                        <th>Network ID</th>
+                        <th>Total Batteries</th>
+                        <th>Active Batteries</th>
+                        <th>Discharged Batteries</th>
+                    </tr>
+                    <% for (var i = 0; i < locals.simulationObject.swappingStations.length; i++) { %>
+                    <tr>
+                        <td><%= locals.simulationObject.swappingStations[i][0] %></td>
+                        <td><%= locals.simulationObject.swappingStations[i][1] %></td>
+                        <td><%= locals.simulationObject.swappingStations[i][2] %></td>
+                        <td><%= locals.simulationObject.swappingStations[i][3] %></td>
+                        <td><%= locals.simulationObject.swappingStations[i][4] %></td>
+                    </tr>
+                    <% } %>
+                </table>
+                <% } %>
+        </div>
+      </div>
+      
+      <div class="split right">
+        <link href="/css/split-screen.css" rel="stylesheet" type="text/css">
+        <div class="centered">
+          <h4>Batteries</h4>
+            <% if (locals.simulationObject.batteries.length != 0) { %>
+            <table>
+                <tr>
+                    <th>Battery ID</th>
+                    <th>Network ID</th>
+                    <th>User</th>
+                    <th>Docked Station</th>
+                    <th>SoC</th>
+                    <th>SoH</th>
+                    <th>Energy Content</th>
+                    <th>Escrowed Amount</th>
+                </tr>
+                <% for (var i = 0; i < locals.simulationObject.batteries.length; i++) { %>
+                <tr>
+                    <td><%= locals.simulationObject.batteries[i][0] %></td>
+                    <td><%= locals.simulationObject.batteries[i][1] %></td>
+                    <td><%= locals.simulationObject.batteries[i][2] %></td>
+                    <td><%= locals.simulationObject.batteries[i][3] %></td>
+                    <td><%= locals.simulationObject.batteries[i][4] %></td>
+                    <td><%= locals.simulationObject.batteries[i][5] %></td>
+                    <td><%= locals.simulationObject.batteries[i][6] %></td>
+                    <td><%= locals.simulationObject.batteries[i][7] %></td>
+                </tr>
+                <% } %>
+            </table>
+            <% } %>
+          <h4>Users</h4>
+            <% if (locals.simulationObject.user.length != 0) { %>
+            <table>
+                <tr>
+                    <th>User Name</th>
+                    <th>User ID</th>
+                    <th>Rented Battery</th>
+                    <th>Wallet</th>
+                </tr>
+                <% for (var i = 0; i < locals.simulationObject.user.length; i++) { %>
+                <tr>
+                    <td><%= locals.simulationObject.user[i][0] %></td>
+                    <td><%= locals.simulationObject.user[i][1] %></td>
+                    <td><%= locals.simulationObject.user[i][2] %></td>
+                    <td><%= locals.simulationObject.user[i][3] %></td>
+                </tr>
+                <% } %>
+            </table>
+            <% } %>
+        </div>
+    </div>
+        <% } %>
+    <% } %>
+    </main>
+</body>
+
+</html>
