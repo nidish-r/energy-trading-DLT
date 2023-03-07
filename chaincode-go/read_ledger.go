@@ -108,6 +108,63 @@ func ReadSwappingStation(stub shim.ChaincodeStubInterface, args []string) pb.Res
 }
 
 /* -------------------------------------------------------------------------- */
+/*                           Fleet Related Methods                            */
+/* -------------------------------------------------------------------------- */
+
+// GenerateFleetReport generates a report for a fleet.
+func GenerateFleetReport(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	var err error
+	fmt.Println("starting GenerateFleetReport")
+
+	if len(args) != 1 {
+		return shim.Error(formatError("NA", "NA", "Incorrect number of arguments. Expecting 1"))
+	}
+
+	//input sanitation
+	err = sanitize_arguments(args)
+	if err != nil {
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	id_fleet := args[0]
+
+	fleet, err := get_fleet(stub, id_fleet)
+	if err != nil {
+		fmt.Println("Fleet not found in Blockchain - " + id_fleet)
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	// Query batteries allocated to fleet
+	queryString := fmt.Sprintf("{\"selector\":{\"docType\":\"battery\",\"allocatedToFleet\":\"%s\"}}", id_fleet)
+	queryResults, err := getQueryResultForQueryString(stub, queryString)
+	if err != nil {
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	type FleetReport struct {
+		Id_fleet       string   `json:"id_fleet"`
+		TotalBatteries uint64   `json:"totalBatteries"`
+		BatteryIDs     []string `json:"batteryIDs"`
+	}
+
+	// Process query results
+	var batteryIDs []string
+	for _, battery := range queryResults {
+		batteryIDs = append(batteryIDs, battery.Id_battery)
+	}
+
+	fleetReport := FleetReport{
+		Id_fleet:       id_fleet,
+		TotalBatteries: fleet.TotalBatteries,
+		BatteryIDs:     batteryIDs,
+	}
+
+	reportAsBytes, _ := json.Marshal(fleetReport)
+	fmt.Println("- end GenerateFleetReport")
+	return shim.Success(reportAsBytes)
+}
+
+/* -------------------------------------------------------------------------- */
 /*                            User Related Methods                            */
 /* -------------------------------------------------------------------------- */
 
@@ -239,4 +296,127 @@ func ReadBatteryHistory(stub shim.ChaincodeStubInterface, args []string) pb.Resp
 	//change to array of bytes
 	historyAsBytes, _ := json.Marshal(history) //convert to array of bytes
 	return shim.Success(historyAsBytes)
+}
+
+func getQueryResultForQueryString(stub shim.ChaincodeStubInterface, queryString string) ([]Battery, error) {
+	resultsIterator, err := stub.GetQueryResult(queryString)
+	if err != nil {
+		return nil, err
+	}
+	defer resultsIterator.Close()
+
+	var batteries []Battery
+	for resultsIterator.HasNext() {
+		queryResponse, err := resultsIterator.Next()
+		if err != nil {
+			return nil, err
+		}
+		var battery Battery
+		err = json.Unmarshal(queryResponse.Value, &battery)
+		if err != nil {
+			return nil, err
+		}
+		batteries = append(batteries, battery)
+	}
+	return batteries, nil
+}
+
+func GetFleetBatteries(stub shim.ChaincodeStubInterface, id_fleet string) ([]Battery, error) {
+	queryString := fmt.Sprintf("{\"selector\":{\"docType\":\"battery\",\"id_fleet\":\"%s\"}}", id_fleet)
+	queryResults, err := getQueryResultForQueryString(stub, queryString)
+	if err != nil {
+		return nil, err
+	}
+	return queryResults, nil
+}
+
+// GetChargedBatteriesBySwappingStation returns a list of charged battery IDs associated with a specific swapping station.
+func GetChargedBatteriesBySwappingStation(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	var err error
+	fmt.Println("starting GetChargedBatteriesBySwappingStation")
+
+	if len(args) != 1 {
+		return shim.Error(formatError("NA", "NA", "Incorrect number of arguments. Expecting 1"))
+	}
+
+	//input sanitation
+	err = sanitize_arguments(args)
+	if err != nil {
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	id_swappingStation := args[0]
+
+	// Query batteries with the specified swapping station ID and charged status
+	queryString := fmt.Sprintf("{\"selector\":{\"docType\":\"battery\",\"DockedStation\":\"%s\",\"SoC\":{\"$gte\":80, \"$lte\":100}}}", id_swappingStation)
+	queryResults, err := getBatteriesForQueryString(stub, queryString)
+	if err != nil {
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	var batteryIDs []string
+	for _, battery := range queryResults {
+		batteryIDs = append(batteryIDs, battery.Id_battery)
+	}
+
+	batteryIDsAsBytes, _ := json.Marshal(batteryIDs)
+	fmt.Println("- end GetChargedBatteriesBySwappingStation")
+	return shim.Success(batteryIDsAsBytes)
+}
+
+// GetChargedBatteriesBySwappingStation returns a list of charged battery IDs associated with a specific swapping station.
+func GetDischargedBatteriesBySwappingStation(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	var err error
+	fmt.Println("starting GetChargedBatteriesBySwappingStation")
+
+	if len(args) != 1 {
+		return shim.Error(formatError("NA", "NA", "Incorrect number of arguments. Expecting 1"))
+	}
+
+	//input sanitation
+	err = sanitize_arguments(args)
+	if err != nil {
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	id_swappingStation := args[0]
+
+	// Query batteries with the specified swapping station ID and charged status
+	queryString := fmt.Sprintf("{\"selector\":{\"docType\":\"battery\",\"DockedStation\":\"%s\",\"SoC\":{\"$gte\":0, \"$lt\":80}}}", id_swappingStation)
+	queryResults, err := getBatteriesForQueryString(stub, queryString)
+	if err != nil {
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	var batteryIDs []string
+	for _, battery := range queryResults {
+		batteryIDs = append(batteryIDs, battery.Id_battery)
+	}
+
+	batteryIDsAsBytes, _ := json.Marshal(batteryIDs)
+	fmt.Println("- end GetChargedBatteriesBySwappingStation")
+	return shim.Success(batteryIDsAsBytes)
+}
+
+func getBatteriesForQueryString(stub shim.ChaincodeStubInterface, queryString string) ([]Battery, error) {
+	resultsIterator, err := stub.GetQueryResult(queryString)
+	if err != nil {
+		return nil, err
+	}
+	defer resultsIterator.Close()
+
+	var batteries []Battery
+	for resultsIterator.HasNext() {
+		queryResponse, err := resultsIterator.Next()
+		if err != nil {
+			return nil, err
+		}
+		var battery Battery
+		err = json.Unmarshal(queryResponse.Value, &battery)
+		if err != nil {
+			return nil, err
+		}
+		batteries = append(batteries, battery)
+	}
+	return batteries, nil
 }

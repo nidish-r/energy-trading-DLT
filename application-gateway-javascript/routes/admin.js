@@ -2,9 +2,11 @@ const express = require('express');
 const { SimulationMap, progressHelper } = require('../util/simulationProgress')
 const { parameterMap } = require('../util/methodParams')
 const router = express.Router();
-const { InitializeFabric, contractWrite, getSimulationOutput } = require('../util/fabricHelper')
+const { InitializeFabric, contractWrite, getSimulationOutput, cleanJSONResponse } = require('../util/fabricHelper')
 
 let contractInstance; 
+let gateway;
+
 const products = [];
 
 let simulationPhase = 0;
@@ -51,26 +53,36 @@ router.post('/', async (req, res, next) => {
 
     /* code block for running each phase on Hyperledger Fabric */
     if(contractInstance == undefined) {
-        contractInstance = await InitializeFabric();
+        const response = await InitializeFabric();
+        contractInstance = response.contractInstance;
+        gateway = response.gateway;
     }
-    const { phaseArray, steps } = progressHelper(simulationPhase + 1);
+
+    const phaseArray = progressHelper(simulationPhase + 1);
     const paramArray = parameterMap[simulationPhase + 1];
 
-    const functionCalls = []
+    let phaseCruncher = 0;
+    if (simulationPhase + 1 <= 3) {
+        phaseCruncher = 2
+    } else {
+        phaseCruncher = simulationPhase
+    }
+
+    const functionCalls = [];
+    const explorerLinks = [];
+
     if(paramArray != undefined) {
         for(let i = 0; i < paramArray.length; i++) {
-        await contractWrite(contractInstance, paramArray[i].methodName, paramArray[i].methodParams)
+        const response = await contractWrite(contractInstance, paramArray[i].methodName, paramArray[i].methodParams);
+        const parsendResponse = cleanJSONResponse(new TextDecoder().decode(response));
         functionCalls.push(paramArray[i].methodName + ": " + paramArray[i].methodParams[0]);
+        explorerLinks.push(`http://localhost:8080/?tab=transactions&transId=${parsendResponse.result}#/transactions`);
     }}
     
     const simulationObject = await getSimulationOutput(contractInstance, simulationPhase + 1);
-    res.render('overview', { simulationPhase, simulationObject, phaseArray, labels, progress: simulationPhase + 2, functionCalls });
+    res.render('overview', { simulationPhase, simulationObject, phaseArray, labels, progress: phaseCruncher, functionCalls, explorerLinks });
     simulationPhase++;
 });
-
-function timeout(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
 
 exports.rouutes = router;
 exports.products = products;

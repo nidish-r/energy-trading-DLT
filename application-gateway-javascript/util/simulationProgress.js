@@ -1,22 +1,21 @@
 const SimulationMap = {
   0 : "BEGIN SIMULATION",
-  1: "Swapping Networks Init",
-  2: "Swapping Stations Init",
-  3: "Batteries Init",
-  4: "User Init",
-  5: "User Recharge",
+  1: "Init Network Components",
+  2: "Init Fleet",
+  3: "Users Init",
+  4: "Users Recharge",
+  5: "Allocate Batteries to Fleet",
   6: "Dock Batteries",
   7: "Return From Service",
-  8: "Transfer Battery From SS1 To User",
-  9: "Transfer Battery From User To SS2",
-  10: "Transfer Battery From SS2 To User",
-  11: "Transfer Battery From User To SS1",
+  8: "Transfer Batteries from SS to Users",
+  9: "Transfer Batteries for Users to SS",
+  10: "Transfer Batteries from SS to Users",
+  11: "Transfer Batteries for Users to SS",
   12: "SIMULATION FINISHED"
 }
 
 function progressHelper(simulationPhase) {
   const phaseArray = []
-  const steps = []
   for(let i = 0; i <= simulationPhase + 1; i++) { 
     if(i < simulationPhase + 1) {
       phaseArray.push(SimulationMap[i]);
@@ -27,11 +26,7 @@ function progressHelper(simulationPhase) {
     }
   }
 
-  for(let i = 0; i <= 12; i++) { 
-    steps.push(SimulationMap[i]);
-  }
-
-  return { phaseArray, steps };
+  return phaseArray;
 }
 
 module.exports = { SimulationMap, progressHelper }

@@ -76,6 +76,21 @@ func get_swappingStation(stub shim.ChaincodeStubInterface, id_swappingStation st
 	return swappingStation, nil
 }
 
+func get_fleet(stub shim.ChaincodeStubInterface, id_fleet string) (Fleet, error) {
+	var fleet Fleet
+	fleetAsBytes, err := stub.GetState(id_fleet)
+	if err != nil {
+		return fleet, errors.New("Failed to find fleet - " + id_fleet)
+	}
+	json.Unmarshal(fleetAsBytes, &fleet)
+
+	if fleet.Id_fleet != id_fleet {
+		return fleet, errors.New("fleet does not exist - " + id_fleet)
+	}
+
+	return fleet, nil
+}
+
 func get_user(stub shim.ChaincodeStubInterface, id_user string) (User, error) {
 	var user User
 	userAsBytes, err := stub.GetState(id_user)

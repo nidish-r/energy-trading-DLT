@@ -12,12 +12,14 @@ const path = require('path');
 const { TextDecoder } = require('util');
 const {
     readSSNetwork1,
-    readSSNetwork2,
     readSwappingStation1,
     readSwappingStation2,
-    readUser,
+    readUser1,
+    readUser2,
     readBattery1,
-    readBattery2} = require('./methodParams');
+    readBattery2,
+    readBattery3,
+    readBattery4} = require('./methodParams');
 
 const channelName = envOrDefault('CHANNEL_NAME', 'mychannel');
 const chaincodeName = envOrDefault('CHAINCODE_NAME', 'basic');
@@ -73,7 +75,7 @@ async function InitializeFabric() {
         const network = gateway.getNetwork(channelName);
 
         // Get the smart contract from the network.
-        return network.getContract(chaincodeName);
+        return { gateway, contractInstance: network.getContract(chaincodeName) };
 }
 
 async function newGrpcConnection() {
@@ -103,12 +105,13 @@ async function newSigner() {
 async function contractWrite(contract, methodType, args) {
     console.log(`\n--> Submit Transaction: ${methodType}, with arguments ${args}`);
 
-    await contract.submitTransaction(
+    const response = await contract.submitTransaction(
         methodType,
         ...args
     );
 
     console.log('*** Transaction committed successfully');
+    return response;
 }
 
 /**
@@ -138,22 +141,16 @@ async function contractRead(contract, methodType, args) {
         user: [],
     }
 
-    let readSwappingStation1Response, readSwappingStation2Response, readBattery1Response, readBattery2Response, readUserResponse;
+    let readSwappingStation1Response, readSwappingStation2Response, readBattery1Response, readBattery2Response, readUserBatteryResponse, readUserResponse;
 
     const readSSNetwork1Response = cleanJSONResponse(await contractRead(contract, readSSNetwork1.methodName, readSSNetwork1.methodParams));
-    const readSSNetwork2Response = cleanJSONResponse(await contractRead(contract, readSSNetwork2.methodName, readSSNetwork2.methodParams));
     
     const readSSNetworkArray = [
     [readSSNetwork1Response.result.name_network, 
         readSSNetwork1Response.result.Id_Network,
         readSSNetwork1Response.result.totalBatteries,
         readSSNetwork1Response.result.status,
-        readSSNetwork1Response.result.wallet], 
-    [readSSNetwork2Response.result.name_network, 
-        readSSNetwork2Response.result.Id_Network,
-        readSSNetwork2Response.result.totalBatteries,
-        readSSNetwork2Response.result.status,
-        readSSNetwork2Response.result.wallet]]
+        readSSNetwork1Response.result.wallet]]
 
     simulationObject.swappingNetworks = readSSNetworkArray;
     
@@ -164,12 +161,16 @@ async function contractRead(contract, methodType, args) {
         const readSwappingStationArray = [ 
     [readSwappingStation1Response.result.id_swappingStation, 
         readSwappingStation1Response.result.id_Network,
+        readSwappingStation1Response.result.company,
+        readSwappingStation1Response.result.unverifiedBatteries,
         readSwappingStation1Response.result.totalBatteries,
         readSwappingStation1Response.result.activeBatteries,
         readSwappingStation1Response.result.dischargedBatteries], 
     [readSwappingStation2Response.result.id_swappingStation, 
         readSwappingStation2Response.result.id_Network,
-        readSwappingStation2Response.result.totalBatteries,
+        readSwappingStation2Response.result.company,
+        readSwappingStation2Response.result.unverifiedBatteries,
+        readSwappingStation1Response.result.totalBatteries,
         readSwappingStation2Response.result.activeBatteries,
         readSwappingStation2Response.result.dischargedBatteries]]
 
@@ -179,10 +180,14 @@ async function contractRead(contract, methodType, args) {
     if(simulationPhase > 2) {
         readBattery1Response = cleanJSONResponse(await contractRead(contract, readBattery1.methodName, readBattery1.methodParams));
         readBattery2Response = cleanJSONResponse(await contractRead(contract, readBattery2.methodName, readBattery2.methodParams));
-        
+        readBattery3Response = cleanJSONResponse(await contractRead(contract, readBattery3.methodName, readBattery3.methodParams));
+        readBattery4Response = cleanJSONResponse(await contractRead(contract, readBattery4.methodName, readBattery4.methodParams));
+
         const readSwappingStationArray = [ 
     [readBattery1Response.result.id_battery, 
         readBattery1Response.result.id_Network,
+        readBattery1Response.result.company,
+        readBattery1Response.result.owner,
         readBattery1Response.result.user,
         readBattery1Response.result.dockedStation,
         readBattery1Response.result.soC,
@@ -191,24 +196,54 @@ async function contractRead(contract, methodType, args) {
         readBattery1Response.result.escrowedAmount],
     [readBattery2Response.result.id_battery, 
         readBattery2Response.result.id_Network,
+        readBattery2Response.result.company,
+        readBattery2Response.result.owner,
         readBattery2Response.result.user,
         readBattery2Response.result.dockedStation,
         readBattery2Response.result.soC,
         readBattery2Response.result.soH,
         readBattery2Response.result.energyContent,
-        readBattery2Response.result.escrowedAmount]]
+        readBattery2Response.result.escrowedAmount],
+    [readBattery3Response.result.id_battery, 
+        readBattery3Response.result.id_Network,
+        readBattery3Response.result.company,
+        readBattery3Response.result.owner,
+        readBattery3Response.result.user,
+        readBattery3Response.result.dockedStation,
+        readBattery3Response.result.soC,
+        readBattery3Response.result.soH,
+        readBattery3Response.result.energyContent,
+        readBattery3Response.result.escrowedAmount],
+    [readBattery4Response.result.id_battery, 
+        readBattery4Response.result.id_Network,
+        readBattery4Response.result.company,
+        readBattery4Response.result.owner,
+        readBattery4Response.result.user,
+        readBattery4Response.result.dockedStation,
+        readBattery4Response.result.soC,
+        readBattery4Response.result.soH,
+        readBattery4Response.result.energyContent,
+        readBattery4Response.result.escrowedAmount]]
     
 
         simulationObject.batteries = readSwappingStationArray;
     }
 
-    if(simulationPhase > 3) {
-        readUserResponse = cleanJSONResponse(await contractRead(contract, readUser.methodName, readUser.methodParams));
+    if(simulationPhase > 4) {
+        readUser1Response = cleanJSONResponse(await contractRead(contract, readUser1.methodName, readUser1.methodParams));
+        readUser2Response = cleanJSONResponse(await contractRead(contract, readUser2.methodName, readUser2.methodParams));
+        
         const readSwappingStationArray = [ 
-    [readUserResponse.result.userName, 
-        readUserResponse.result.id_user,
-        readUserResponse.result.rentedBattery,
-        readUserResponse.result.wallet]]
+    [readUser1Response.result.userName, 
+        readUser1Response.result.id_user,
+        readUser1Response.result.company,
+        readUser1Response.result.rentedBattery,
+        readUser1Response.result.wallet],
+    [readUser2Response.result.userName, 
+        readUser2Response.result.id_user,
+        readUser2Response.result.company,
+        readUser2Response.result.rentedBattery,
+        readUser2Response.result.wallet]]
 
         simulationObject.user = readSwappingStationArray;
     }
@@ -251,4 +286,4 @@ async function displayInputParameters() {
     console.log(`peerHostAlias:     ${peerHostAlias}`);
 }
 
-module.exports = { InitializeFabric, contractWrite, getSimulationOutput }
+module.exports = { InitializeFabric, contractWrite, getSimulationOutput, cleanJSONResponse }

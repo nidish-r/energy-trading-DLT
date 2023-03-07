@@ -246,13 +246,60 @@ func InitializeBattery(stub shim.ChaincodeStubInterface, args []string) pb.Respo
 	return shim.Success(formatSuccess("NA", "NA", txID))
 }
 
+// InitializeFleet adds a new Fleet asset in the world state with given id.
+func InitializeFleet(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	var err error
+	fmt.Println("starting InitializeFleet")
+
+	if len(args) != 7 {
+		return shim.Error(formatError("NA", "NA", "Incorrect number of arguments. Expecting 4"))
+	}
+
+	//input sanitation
+	err = sanitize_arguments(args)
+	if err != nil {
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	var fleet Fleet
+	fleet.Id_fleet = args[0]
+	fleet.FleetName = args[1]
+	fleet.Company = args[2]
+	fleet.Industry = args[3]
+	fleet.EmailId = args[4]
+	fleet.ContactNumber = args[5]
+	fleet.Address = args[6]
+	fleet.DocType = "fleet"
+	fmt.Println(fleet)
+
+	//check if fleet already exists
+	fleetAsBytes, err := stub.GetState(fleet.Id_fleet)
+	if err == nil && fleetAsBytes != nil {
+		fmt.Println("This fleet already exists - " + fleet.Id_fleet)
+		return shim.Error(formatError("NA", "NA", "This fleet already exists - "+fleet.Id_fleet))
+	}
+
+	//Store the fleet in ledger
+	fleetAsBytes, _ = json.Marshal(fleet)
+	err = stub.PutState(fleet.Id_fleet, fleetAsBytes)
+	if err != nil {
+		fmt.Println("Could not store fleet")
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	fmt.Println("- end init fleet")
+
+	txID := stub.GetTxID()
+	return shim.Success(formatSuccess("NA", "NA", txID))
+}
+
 // InitializeUser adds a new User asset in the world state with given id.
 func InitializeUser(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	var err error
 	fmt.Println("starting InitializeUser")
 
-	if len(args) != 6 {
-		return shim.Error(formatError("NA", "NA", "Incorrect number of arguments. Expecting 6"))
+	if len(args) != 8 {
+		return shim.Error(formatError("NA", "NA", "Incorrect number of arguments. Expecting 7"))
 	}
 
 	//input sanitation
@@ -267,7 +314,9 @@ func InitializeUser(stub shim.ChaincodeStubInterface, args []string) pb.Response
 	user.Address = args[2]
 	user.AadharNumber = args[3]
 	user.EmailId = args[4]
-	user.MobileNumber = args[5]
+	user.FleetId = args[5]
+	user.Company = args[6]
+	user.MobileNumber = args[7]
 	user.DocType = "user"
 	fmt.Println(user)
 
@@ -295,6 +344,73 @@ func InitializeUser(stub shim.ChaincodeStubInterface, args []string) pb.Response
 /* -------------------------------------------------------------------------- */
 /*                          Asset Transfer Methods                            */
 /* -------------------------------------------------------------------------- */
+
+// AllocateBatteryToFleet allocates a battery to a fleet.
+func AllocateBatteryToFleet(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	var err error
+	fmt.Println("starting AllocateBatteryToFleet")
+
+	if len(args) != 4 {
+		return shim.Error(formatError("NA", "NA", "Incorrect number of arguments. Expecting 4"))
+	}
+
+	//input sanitation
+	err = sanitize_arguments(args)
+	if err != nil {
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	id_fleet := args[0]
+	id_battery := args[1]
+
+	// Check if the fleet exists
+	fleet, err := get_fleet(stub, id_fleet)
+	if err != nil {
+		fmt.Println("Fleet not found in Blockchain - " + id_fleet)
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	// Check if the battery exists
+	battery, err := get_battery(stub, id_battery)
+	if err != nil {
+		fmt.Println("Battery not found in Blockchain - " + id_battery)
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	if battery.AllocatedToFleet != "" {
+		return shim.Error(formatError("NA", "NA", "Battery is already allocated to fleet - "+battery.AllocatedToFleet))
+	}
+
+	// Update the battery status and owner
+	battery.Status = args[2]
+	battery.Company = args[3]
+	battery.AllocatedToFleet = id_fleet
+
+	// Decrement Number of Batteries for fleet by 1 as the battery is deallocated
+	fleetTotalBatteriesInt, err := add(int(fleet.TotalBatteries), 1)
+	fleet.TotalBatteries = uint64(fleetTotalBatteriesInt)
+
+	// Store the updated battery in the ledger
+	batteryAsBytes, _ := json.Marshal(battery)
+	err = stub.PutState(battery.Id_battery, batteryAsBytes)
+	if err != nil {
+		fmt.Println("Could not store battery")
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	// Store the updated battery in the ledger
+	fleetAsBytes, _ := json.Marshal(fleet)
+	err = stub.PutState(fleet.Id_fleet, fleetAsBytes)
+	if err != nil {
+		fmt.Println("Could not store fleet")
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	fmt.Println("- end AllocateBatteryToFleet")
+
+	txID := stub.GetTxID()
+	return shim.Success(formatSuccess("NA", "NA", txID))
+}
 
 // DockBatteryOnSwappingStation will link existing swap station with new discharged/charged battery, before returning battery from service (charge).
 func DockBatteryOnSwappingStation(stub shim.ChaincodeStubInterface, args []string) pb.Response {
@@ -332,6 +448,7 @@ func DockBatteryOnSwappingStation(stub shim.ChaincodeStubInterface, args []strin
 	Cdc_uint64, _ := strconv.ParseUint(args[4], 10, 0)
 	battery.Cdc = uint16(Cdc_uint64)
 	battery.DockedStation = args[5]
+	battery.Owner = "TruePower"
 	battery.Status = "In_Service"
 
 	//Swapping station (docked station) needs to be initialized
@@ -339,6 +456,10 @@ func DockBatteryOnSwappingStation(stub shim.ChaincodeStubInterface, args []strin
 	if err != nil {
 		fmt.Println("The Swapping Station doesnt exist - " + battery.Id_Network)
 		return shim.Error(formatError("NA", "NA", "The Swapping Station doesnt exist - "+battery.Id_Network))
+	}
+
+	if battery.Company != swappingStation.Company {
+		return shim.Error(formatError("NA", "NA", "Battery can only be docked on swapping station of the same company - "+id_battery))
 	}
 
 	// Increment Number of Batteries for swapping station by 1 as new battery is added
@@ -365,7 +486,341 @@ func DockBatteryOnSwappingStation(stub shim.ChaincodeStubInterface, args []strin
 		return shim.Error(formatError("NA", "NA", err.Error()))
 	}
 
-	fmt.Println("- end DockBatteryOnSwappingStation battery ")
+	fmt.Println("- end DockBatteryOnSwappingStation")
+
+	txID := stub.GetTxID()
+	return shim.Success(formatSuccess("NA", "NA", txID))
+}
+
+// DockOONBatteryOnSwappingStationgitk will dock unverified out of network battery on swap station, before verifying and returning battery from service (charge).
+func DockOONBatteryOnSwappingStation(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	var err error
+	fmt.Println("starting DockOONBatteryOnSwappingStation")
+
+	if len(args) != 7 {
+		return shim.Error(formatError("NA", "NA", "Incorrect number of arguments. Expecting 7"))
+	}
+
+	//input sanitation
+	err = sanitize_arguments(args)
+	if err != nil {
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	id_battery := args[0]
+
+	_, err = get_battery(stub, id_battery)
+	if err == nil {
+		fmt.Println("battery already found in Blockchain - " + id_battery)
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	var battery Battery
+
+	battery.Id_battery = id_battery
+	battery.Id_Network = args[1]
+	battery.DockedStation = args[2]
+	battery.Owner = args[3]
+	battery.ModelNumber = args[4]
+	battery.ManufacturerId = args[5]
+	battery.ManufactureDate = args[6]
+	battery.Status = "Unverified"
+	battery.DocType = "battery"
+
+	//SS_Network needs to be initialized
+	ssNetwork, err := get_ssNetwork(stub, battery.Id_Network)
+	if err != nil {
+		fmt.Println("The Battery Network doesnt exist - " + battery.Id_Network)
+		return shim.Error(formatError("NA", "NA", "The Battery Network doesnt exist - "+battery.Id_Network))
+	}
+
+	// Increment Number of Batteries for Network by 1 as new battery is added
+	networkUnverifiedBatteriesInt, err := add(int(ssNetwork.UnverifiedBatteries), 1)
+	ssNetwork.UnverifiedBatteries = uint64(networkUnverifiedBatteriesInt)
+
+	//Swapping station (docked station) needs to be initialized
+	swappingStation, err := get_swappingStation(stub, battery.DockedStation)
+	if err != nil {
+		fmt.Println("The Swapping Station doesnt exist - " + battery.DockedStation)
+		return shim.Error(formatError("NA", "NA", "The Swapping Station doesnt exist - "+battery.DockedStation))
+	}
+
+	// Increment Number of Batteries for swapping station by 1 as new battery is added
+	swappingStationUnverifiedBatteriesInt, err := add(int(swappingStation.UnverifiedBatteries), 1)
+	swappingStation.UnverifiedBatteries = uint64(swappingStationUnverifiedBatteriesInt)
+
+	//Store the ssNetwork in ledger
+	ssNetworkAsBytes, _ := json.Marshal(ssNetwork)
+	err = stub.PutState(ssNetwork.Id_Network, ssNetworkAsBytes)
+	if err != nil {
+		fmt.Println("Could not store battery Network")
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	//Store the battery in ledger
+	batteryAsBytes, _ := json.Marshal(battery)
+	err = stub.PutState(id_battery, batteryAsBytes)
+	if err != nil {
+		fmt.Println("Could not store battery")
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	//Store the swapping station in ledger
+	swappingStationAsBytes, _ := json.Marshal(swappingStation)
+	err = stub.PutState(swappingStation.Id_swappingStation, swappingStationAsBytes)
+	if err != nil {
+		fmt.Println("Could not store swapping station")
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	fmt.Println("- end DockOONBatteryOnSwappingStation battery ")
+
+	txID := stub.GetTxID()
+	return shim.Success(formatSuccess("NA", "NA", txID))
+}
+
+// VerifiyOONBatteryOnSS will verifiy out of network battery on swap station, before putting the battery for service (charge).
+func VerifiyOONBatteryOnSS(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	var err error
+	fmt.Println("starting VerifiyOONBatteryOnSS")
+
+	if len(args) != 5 {
+		return shim.Error(formatError("NA", "NA", "Incorrect number of arguments. Expecting 5"))
+	}
+
+	//input sanitation
+	err = sanitize_arguments(args)
+	if err != nil {
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	id_battery := args[0]
+
+	battery, err := get_battery(stub, id_battery)
+	if err != nil {
+		fmt.Println("battery not found in Blockchain. Please dock OON battery first  - " + id_battery)
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	SoC_uint64, _ := strconv.ParseUint(args[1], 10, 0)
+	battery.SoC = uint8(SoC_uint64)
+	SoH_uint64, _ := strconv.ParseUint(args[2], 10, 0)
+	battery.SoH = uint8(SoH_uint64)
+	EnergyContent_float64, _ := strconv.ParseFloat(args[3], 32)
+	battery.EnergyContent = float32(EnergyContent_float64)
+	Cdc_uint64, _ := strconv.ParseUint(args[4], 10, 0)
+	battery.Cdc = uint16(Cdc_uint64)
+	battery.Status = "In_Service"
+
+	//SS_Network needs to be initialized
+	ssNetwork, err := get_ssNetwork(stub, battery.Id_Network)
+	if err != nil {
+		fmt.Println("The Battery Network doesnt exist - " + battery.Id_Network)
+		return shim.Error(formatError("NA", "NA", "The Battery Network doesnt exist - "+battery.Id_Network))
+	}
+
+	// Increment Number of Batteries for Network by 1 as new battery is added
+	networkUnverifiedBatteriesInt, err := sub(int(ssNetwork.UnverifiedBatteries), 1)
+	ssNetwork.UnverifiedBatteries = uint64(networkUnverifiedBatteriesInt)
+
+	// Increment Number of Batteries for swapping station by 1 as battery is verified
+	networkTotalBatteriesInt, err := add(int(ssNetwork.TotalBatteries), 1)
+	ssNetwork.TotalBatteries = uint64(networkTotalBatteriesInt)
+
+	//Swapping station (docked station) needs to be initialized
+	swappingStation, err := get_swappingStation(stub, battery.DockedStation)
+	if err != nil {
+		fmt.Println("The Swapping Station doesnt exist - " + battery.Id_Network)
+		return shim.Error(formatError("NA", "NA", "The Swapping Station doesnt exist - "+battery.Id_Network))
+	}
+
+	// Decrement Number of Batteries for swapping station by 1 as battery is verified
+	swappingStationUnverifiedBatteriesInt, err := sub(int(swappingStation.UnverifiedBatteries), 1)
+	swappingStation.UnverifiedBatteries = uint64(swappingStationUnverifiedBatteriesInt)
+
+	// Increment Number of Batteries for swapping station by 1 as battery is verified
+	swappingStationTotalBatteriesInt, err := add(int(swappingStation.TotalBatteries), 1)
+	swappingStation.TotalBatteries = uint64(swappingStationTotalBatteriesInt)
+
+	// Increment Number of discharged in swapping station by 1 as new uncharged battery is added
+	swappingStationDischargedBatteriesInt, err := add(int(swappingStation.DischargedBatteries), 1)
+	swappingStation.DischargedBatteries = uint64(swappingStationDischargedBatteriesInt)
+
+	//Store the ssNetwork in ledger
+	ssNetworkAsBytes, _ := json.Marshal(ssNetwork)
+	err = stub.PutState(ssNetwork.Id_Network, ssNetworkAsBytes)
+	if err != nil {
+		fmt.Println("Could not store battery Network")
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	//Store the battery in ledger
+	batteryAsBytes, _ := json.Marshal(battery)
+	err = stub.PutState(battery.Id_battery, batteryAsBytes)
+	if err != nil {
+		fmt.Println("Could not store battery")
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	//Store the swapping station in ledger
+	swappingStationAsBytes, _ := json.Marshal(swappingStation)
+	err = stub.PutState(swappingStation.Id_swappingStation, swappingStationAsBytes)
+	if err != nil {
+		fmt.Println("Could not store swapping station")
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	fmt.Println("- end VerifiyOONBatteryOnSS battery ")
+
+	txID := stub.GetTxID()
+	return shim.Success(formatSuccess("NA", "NA", txID))
+}
+
+// DeallocateBatteryFromFleet removes the association between a battery and a fleet.
+func DeallocateBatteryFromFleet(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	var err error
+	fmt.Println("starting DeallocateBatteryFromFleet")
+
+	if len(args) != 2 {
+		return shim.Error(formatError("NA", "NA", "Incorrect number of arguments. Expecting 2"))
+	}
+
+	//input sanitation
+	err = sanitize_arguments(args)
+	if err != nil {
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	id_battery := args[0]
+	id_fleet := args[1]
+
+	battery, err := get_battery(stub, id_battery)
+	if err != nil {
+		fmt.Println("battery not found in Blockchain - " + id_battery)
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	fleet, err := get_fleet(stub, id_fleet)
+	if err != nil {
+		fmt.Println("Fleet not found in Blockchain - " + id_fleet)
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	if battery.AllocatedToFleet != id_fleet {
+		return shim.Error(formatError("NA", "NA", "Battery is not allocated to the specified fleet - "+id_fleet))
+	}
+
+	battery.User = ""
+	battery.AllocatedToFleet = ""
+	battery.Status = "Available"
+
+	// Decrement Number of Batteries for fleet by 1 as the battery is deallocated
+	fleetTotalBatteriesInt, err := sub(int(fleet.TotalBatteries), 1)
+	fleet.TotalBatteries = uint64(fleetTotalBatteriesInt)
+
+	//Store the battery in ledger
+	batteryAsBytes, _ := json.Marshal(battery)
+	err = stub.PutState(battery.Id_battery, batteryAsBytes)
+	if err != nil {
+		fmt.Println("Could not store battery")
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	//Store the fleet in ledger
+	fleetAsBytes, _ := json.Marshal(fleet)
+	err = stub.PutState(fleet.Id_fleet, fleetAsBytes)
+	if err != nil {
+		fmt.Println("Could not store fleet")
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	fmt.Println("- end DeallocateBatteryFromFleet")
+
+	txID := stub.GetTxID()
+	return shim.Success(formatSuccess("NA", "NA", txID))
+}
+
+// TransferBatteryBetweenFleets transfers a battery from one fleet to another.
+func TransferBatteryBetweenFleets(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	var err error
+	fmt.Println("starting TransferBatteryBetweenFleets")
+
+	if len(args) != 3 {
+		return shim.Error(formatError("NA", "NA", "Incorrect number of arguments. Expecting 3"))
+	}
+
+	//input sanitation
+	err = sanitize_arguments(args)
+	if err != nil {
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	id_battery := args[0]
+	source_fleet_id := args[1]
+	target_fleet_id := args[2]
+
+	battery, err := get_battery(stub, id_battery)
+	if err != nil {
+		fmt.Println("battery not found in Blockchain - " + id_battery)
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	source_fleet, err := get_fleet(stub, source_fleet_id)
+	if err != nil {
+		fmt.Println("Source fleet not found in Blockchain - " + source_fleet_id)
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	target_fleet, err := get_fleet(stub, target_fleet_id)
+	if err != nil {
+		fmt.Println("Target fleet not found in Blockchain - " + target_fleet_id)
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	if battery.AllocatedToFleet != source_fleet_id {
+		return shim.Error(formatError("NA", "NA", "Battery is not allocated to the source fleet - "+source_fleet_id))
+	}
+
+	if source_fleet.Company != target_fleet.Company {
+		return shim.Error(formatError("NA", "NA", "Battery can only be transferred between fleets on the same company - "+source_fleet.Company))
+	}
+
+	// Update the battery's fleet allocation
+	battery.AllocatedToFleet = target_fleet_id
+
+	// Decrement Number of Batteries for source fleet by 1 as the battery is transferred
+	sourceFleetTotalBatteriesInt, err := sub(int(source_fleet.TotalBatteries), 1)
+	source_fleet.TotalBatteries = uint64(sourceFleetTotalBatteriesInt)
+
+	// Increment Number of Batteries for target fleet by 1 as the battery is transferred
+	targetFleetTotalBatteriesInt, err := add(int(target_fleet.TotalBatteries), 1)
+	target_fleet.TotalBatteries = uint64(targetFleetTotalBatteriesInt)
+
+	//Store the battery in ledger
+	batteryAsBytes, _ := json.Marshal(battery)
+	err = stub.PutState(battery.Id_battery, batteryAsBytes)
+	if err != nil {
+		fmt.Println("Could not store battery")
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	//Store the source fleet in ledger
+	sourceFleetAsBytes, _ := json.Marshal(source_fleet)
+	err = stub.PutState(source_fleet.Id_fleet, sourceFleetAsBytes)
+	if err != nil {
+		fmt.Println("Could not store source fleet")
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	//Store the target fleet in ledger
+	targetFleetAsBytes, _ := json.Marshal(target_fleet)
+	err = stub.PutState(target_fleet.Id_fleet, targetFleetAsBytes)
+	if err != nil {
+		fmt.Println("Could not store target fleet")
+		return shim.Error(formatError("NA", "NA", err.Error()))
+	}
+
+	fmt.Println("- end TransferBatteryBetweenFleets")
 
 	txID := stub.GetTxID()
 	return shim.Success(formatSuccess("NA", "NA", txID))
@@ -434,6 +889,10 @@ func TransferBatteryFromSSToUser(stub shim.ChaincodeStubInterface, args []string
 	if err != nil {
 		fmt.Println("The User doesnt exist - " + battery.User)
 		return shim.Error(formatError("NA", "NA", "The User doesnt exist - "+battery.User))
+	}
+
+	if swappingStation.Company != user.Company {
+		return shim.Error(formatError("NA", "NA", "Battery can only be swapped between swapping stations of same company - "+id_battery))
 	}
 
 	// Mark rented battery in the user object
@@ -598,6 +1057,10 @@ func TransferBatteryFromUserToSS(stub shim.ChaincodeStubInterface, args []string
 	if err != nil {
 		fmt.Println("The Swapping Station doesnt exist - " + battery.Id_Network)
 		return shim.Error(formatError("NA", "NA", "The Swapping Station doesnt exist - "+battery.Id_Network))
+	}
+
+	if swappingStation.Company != battery.Company {
+		return shim.Error(formatError("NA", "NA", "Battery can only be swapped between swapping stations of same company - "+id_battery))
 	}
 
 	// Increment Number of Discharged Batteries for swapping station by 1 as used battery is added

@@ -44,8 +44,10 @@
     <% } else if (locals.simulationObject != undefined) { %>
     <h3>Dashboard</h3>
     <h4>DLT Method Calls</h4>
-    <% for (var i = 0; i < locals.functionCalls.length; i++) { %>
-        <p><%= "[" + i + "]" + ": "+ locals.functionCalls[i] %></p>
+    <% for (var i = 1; i <= locals.functionCalls.length; i++) { %>
+        <p><%= "[" + i + "]" + ": "+ locals.functionCalls[i-1] + "  -  "%>
+            <a href="<%=locals.explorerLinks[i-1]%>"><%=locals.explorerLinks[i-1]%></a>
+        </p>
     <% } %>
     <div class="split left">
         <link href="/css/split-screen.css" rel="stylesheet" type="text/css">
@@ -77,9 +79,11 @@
                     <tr>
                         <th>SS Name</th>
                         <th>Network ID</th>
-                        <th>Total Batteries</th>
-                        <th>Active Batteries</th>
-                        <th>Discharged Batteries</th>
+                        <th>Company</th>
+                        <th>Unverified</th>
+                        <th>Total</th>
+                        <th>Active</th>
+                        <th>Discharged</th>
                     </tr>
                     <% for (var i = 0; i < locals.simulationObject.swappingStations.length; i++) { %>
                     <tr>
@@ -88,6 +92,8 @@
                         <td><%= locals.simulationObject.swappingStations[i][2] %></td>
                         <td><%= locals.simulationObject.swappingStations[i][3] %></td>
                         <td><%= locals.simulationObject.swappingStations[i][4] %></td>
+                        <td><%= locals.simulationObject.swappingStations[i][5] %></td>
+                        <td><%= locals.simulationObject.swappingStations[i][6] %></td>
                     </tr>
                     <% } %>
                 </table>
@@ -102,14 +108,16 @@
             <% if (locals.simulationObject.batteries.length != 0) { %>
             <table>
                 <tr>
-                    <th>Battery ID</th>
+                    <th>ID</th>
                     <th>Network ID</th>
+                    <th>Company</th>
+                    <th>Owner</th>
                     <th>User</th>
-                    <th>Docked Station</th>
+                    <th>Dock</th>
                     <th>SoC</th>
                     <th>SoH</th>
-                    <th>Energy Content</th>
-                    <th>Escrowed Amount</th>
+                    <th>Energy</th>
+                    <th>Escrow</th>
                 </tr>
                 <% for (var i = 0; i < locals.simulationObject.batteries.length; i++) { %>
                 <tr>
@@ -121,6 +129,8 @@
                     <td><%= locals.simulationObject.batteries[i][5] %></td>
                     <td><%= locals.simulationObject.batteries[i][6] %></td>
                     <td><%= locals.simulationObject.batteries[i][7] %></td>
+                    <td><%= locals.simulationObject.batteries[i][8] %></td>
+                    <td><%= locals.simulationObject.batteries[i][9] %></td>
                 </tr>
                 <% } %>
             </table>
@@ -131,6 +141,7 @@
                 <tr>
                     <th>User Name</th>
                     <th>User ID</th>
+                    <th>Company</th>
                     <th>Rented Battery</th>
                     <th>Wallet</th>
                 </tr>
@@ -140,6 +151,7 @@
                     <td><%= locals.simulationObject.user[i][1] %></td>
                     <td><%= locals.simulationObject.user[i][2] %></td>
                     <td><%= locals.simulationObject.user[i][3] %></td>
+                    <td><%= locals.simulationObject.user[i][4] %></td>
                 </tr>
                 <% } %>
             </table>

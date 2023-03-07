@@ -51,33 +51,37 @@ type Response struct {
 // Structure for `SSNetwork`
 //
 type SSNetwork struct {
-	Id_Network       string  `json:"Id_Network"`
-	Name_Network     string  `json:"name_network"`
-	TotalBatteries   uint64  `json:"totalBatteries"`
-	ExpiredBatteries uint64  `json:"expiredBatteries"`
-	Status           string  `json:"status"`
-	Wallet           float32 `json:"wallet"`
-	DocType          string  `json:"docType"`
+	Id_Network          string  `json:"Id_Network"`
+	Name_Network        string  `json:"name_network"`
+	UnverifiedBatteries uint64  `json:"unverifiedBatteries"`
+	TotalBatteries      uint64  `json:"totalBatteries"`
+	ExpiredBatteries    uint64  `json:"expiredBatteries"`
+	Status              string  `json:"status"`
+	Wallet              float32 `json:"wallet"`
+	DocType             string  `json:"docType"`
 }
 
 //
 // Structure for `Battery`
 //
 type Battery struct {
-	Id_battery      string  `json:"id_battery"`
-	ModelNumber     string  `json:"modelNumber"`
-	SoC             uint8   `json:"soC"`
-	SoH             uint8   `json:"soH"`
-	EnergyContent   float32 `json:"energyContent"`
-	Cdc             uint16  `json:"cdc"`
-	DockedStation   string  `json:"dockedStation"`
-	EscrowedAmount  float32 `json:"escrowedAmount"`
-	Id_Network      string  `json:"id_Network"`
-	User            string  `json:"user"`
-	Status          string  `json:"status"`
-	ManufacturerId  string  `json:"manufacturerId"`
-	ManufactureDate string  `json:"manufactureDate"`
-	DocType         string  `json:"docType"`
+	Id_battery       string  `json:"id_battery"`
+	ModelNumber      string  `json:"modelNumber"`
+	SoC              uint8   `json:"soC"`
+	SoH              uint8   `json:"soH"`
+	EnergyContent    float32 `json:"energyContent"`
+	Cdc              uint16  `json:"cdc"`
+	DockedStation    string  `json:"dockedStation"`
+	AllocatedToFleet string  `json:"allocatedToFleet"`
+	Company          string  `json:"company"`
+	EscrowedAmount   float32 `json:"escrowedAmount"`
+	Id_Network       string  `json:"id_Network"`
+	User             string  `json:"user"`
+	Owner            string  `json:"owner"`
+	Status           string  `json:"status"`
+	ManufacturerId   string  `json:"manufacturerId"`
+	ManufactureDate  string  `json:"manufactureDate"`
+	DocType          string  `json:"docType"`
 }
 
 //
@@ -87,6 +91,7 @@ type SwappingStation struct {
 	Id_swappingStation  string `json:"id_swappingStation"`
 	SwappingStationName string `json:"swappingStationName"`
 	Id_Network          string `json:"id_Network"`
+	UnverifiedBatteries uint64 `json:"unverifiedBatteries"`
 	TotalBatteries      uint64 `json:"totalBatteries"`
 	ActiveBatteries     uint64 `json:"activeBatteries"`
 	ExpiredBatteries    uint64 `json:"expiredBatteries"`
@@ -101,6 +106,21 @@ type SwappingStation struct {
 }
 
 //
+// Structure for `Fleet`
+//
+type Fleet struct {
+	Id_fleet       string `json:"id_fleet"`
+	FleetName      string `json:"fleetName"`
+	TotalBatteries uint64 `json:"totalBatteries"`
+	Company        string `json:"company"`
+	Industry       string `json:"industry"` // can be used to differentiate fleets (ninjacart, zepto), last-mile (delhivery, amazon), ride-hailing (rapido, ola bike), and corporate campuses (avis india, etc.)
+	EmailId        string `json:"emailId"`
+	ContactNumber  string `json:"contactNumber"`
+	Address        string `json:"address"`
+	DocType        string `json:"docType"`
+}
+
+//
 // Structure for `User`
 //
 type User struct {
@@ -109,6 +129,8 @@ type User struct {
 	Address       string  `json:"address"`
 	AadharNumber  string  `json:"aadharNumber"`
 	EmailId       string  `json:"emailId"`
+	FleetId       string  `json:"fleetId"`
+	Company       string  `json:"company"`
 	MobileNumber  string  `json:"mobileNumber"`
 	RentedBattery string  `json:"rentedBattery"`
 	Wallet        float32 `json:"wallet"`
@@ -124,6 +146,7 @@ const SwappingStationPrefix = "SS"
 const BatteryPrefix = "Battery"
 const UserPrefix = "User"
 const TruePowerNetworkPrefix = "TruePowerNetwork"
+const FleetPrefix = "Fleet"
 
 // ============================================================================================================================
 // Enum Definitions - Absolute states of allowed status for different assets (WIP)
@@ -190,6 +213,10 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return InitializeUser(stub, args)
 	} else if function == "RechargeUserWallet" {
 		return RechargeUserWallet(stub, args)
+	} else if function == "DockOONBatteryOnSwappingStation" {
+		return DockOONBatteryOnSwappingStation(stub, args)
+	} else if function == "VerifiyOONBatteryOnSS" {
+		return VerifiyOONBatteryOnSS(stub, args)
 	} else if function == "DockBatteryOnSwappingStation" {
 		return DockBatteryOnSwappingStation(stub, args)
 	} else if function == "TransferBatteryFromSSToUser" {
@@ -214,6 +241,16 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return ReadBattery(stub, args)
 	} else if function == "ReadBatteryHistory" {
 		return ReadBatteryHistory(stub, args)
+	} else if function == "InitializeFleet" {
+		return InitializeFleet(stub, args)
+	} else if function == "AllocateBatteryToFleet" {
+		return AllocateBatteryToFleet(stub, args)
+	} else if function == "DeallocateBatteryFromFleet" {
+		return DeallocateBatteryFromFleet(stub, args)
+	} else if function == "TransferBatteryBetweenFleets" {
+		return TransferBatteryBetweenFleets(stub, args)
+	} else if function == "GenerateFleetReport" {
+		return GenerateFleetReport(stub, args)
 	}
 
 	// error out
