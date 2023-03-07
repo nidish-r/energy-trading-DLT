@@ -118,7 +118,9 @@ func InitializeSSNetwork(stub shim.ChaincodeStubInterface, args []string) pb.Res
 	}
 
 	fmt.Println("- end init ssNetwork ")
-	return shim.Success(formatSuccess("NA", "NA", nil))
+
+	txID := stub.GetTxID()
+	return shim.Success(formatSuccess("NA", "NA", txID))
 }
 
 // InitializeSwappingStation adds a new SwappingStation asset in the world state with given id.
@@ -165,7 +167,9 @@ func InitializeSwappingStation(stub shim.ChaincodeStubInterface, args []string) 
 	}
 
 	fmt.Println("- end init swappingStation ")
-	return shim.Success(formatSuccess("NA", "NA", nil))
+
+	txID := stub.GetTxID()
+	return shim.Success(formatSuccess("NA", "NA", txID))
 }
 
 // InitializeBattery adds a new Battery asset in the world state with given id.
@@ -237,7 +241,9 @@ func InitializeBattery(stub shim.ChaincodeStubInterface, args []string) pb.Respo
 	}
 
 	fmt.Println("- end init battery ")
-	return shim.Success(formatSuccess("NA", "NA", nil))
+
+	txID := stub.GetTxID()
+	return shim.Success(formatSuccess("NA", "NA", txID))
 }
 
 // InitializeUser adds a new User asset in the world state with given id.
@@ -281,7 +287,9 @@ func InitializeUser(stub shim.ChaincodeStubInterface, args []string) pb.Response
 	}
 
 	fmt.Println("- end init user ")
-	return shim.Success(formatSuccess("NA", "NA", nil))
+
+	txID := stub.GetTxID()
+	return shim.Success(formatSuccess("NA", "NA", txID))
 }
 
 /* -------------------------------------------------------------------------- */
@@ -358,7 +366,9 @@ func DockBatteryOnSwappingStation(stub shim.ChaincodeStubInterface, args []strin
 	}
 
 	fmt.Println("- end DockBatteryOnSwappingStation battery ")
-	return shim.Success(formatSuccess("NA", "NA", nil))
+
+	txID := stub.GetTxID()
+	return shim.Success(formatSuccess("NA", "NA", txID))
 }
 
 // TransferBatteryFromSSToUser transfers charged battery from SS to user for consumption.
@@ -463,7 +473,9 @@ func TransferBatteryFromSSToUser(stub shim.ChaincodeStubInterface, args []string
 	}
 
 	fmt.Println("- end TransferBatteryFromSSToUser battery ")
-	return shim.Success(formatSuccess("NA", "NA", nil))
+
+	txID := stub.GetTxID()
+	return shim.Success(formatSuccess("NA", "NA", txID))
 }
 
 // TransferBatteryFromUserToSS transfers discharged (used) battery from user to SS for recharging post use.
@@ -623,7 +635,9 @@ func TransferBatteryFromUserToSS(stub shim.ChaincodeStubInterface, args []string
 	}
 
 	fmt.Println("- end transferLnd2BSS battery ")
-	return shim.Success(formatSuccess("NA", "NA", nil))
+
+	txID := stub.GetTxID()
+	return shim.Success(formatSuccess("NA", "NA", txID))
 }
 
 // ReturnBatteryFromService marks battery on SS as ready to use once charged.
@@ -703,7 +717,9 @@ func ReturnBatteryFromService(stub shim.ChaincodeStubInterface, args []string) p
 	}
 
 	fmt.Println("- end returnFromService battery ")
-	return shim.Success(formatSuccess("NA", "NA", nil))
+
+	txID := stub.GetTxID()
+	return shim.Success(formatSuccess("NA", "NA", txID))
 }
 
 /* -------------------------------------------------------------------------- */
@@ -736,7 +752,9 @@ func PayToSSNetwork(stub shim.ChaincodeStubInterface, args []string) pb.Response
 	}
 
 	fmt.Println("- end payToWallet Battery Network")
-	return shim.Success(formatSuccess("NA", "NA", nil))
+
+	txID := stub.GetTxID()
+	return shim.Success(formatSuccess("NA", "NA", txID))
 }
 
 // PayToUser adds specific amount to user wallet balance.
@@ -765,7 +783,9 @@ func RechargeUserWallet(stub shim.ChaincodeStubInterface, args []string) pb.Resp
 	}
 
 	fmt.Println("- end payToWallet user ")
-	return shim.Success(formatSuccess("NA", "NA", nil))
+
+	txID := stub.GetTxID()
+	return shim.Success(formatSuccess("NA", "NA", txID))
 }
 
 // PayToUser adds specific amount to user wallet balance.
@@ -794,7 +814,9 @@ func PayToUser(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	}
 
 	fmt.Println("- end payToWallet user ")
-	return shim.Success(formatSuccess("NA", "NA", nil))
+
+	txID := stub.GetTxID()
+	return shim.Success(formatSuccess("NA", "NA", txID))
 }
 
 // PayFromUser deducts specific amount from user wallet balance.
@@ -823,7 +845,9 @@ func PayFromUser(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	}
 
 	fmt.Println("- end payFromWallet user ")
-	return shim.Success(formatSuccess("NA", "NA", nil))
+
+	txID := stub.GetTxID()
+	return shim.Success(formatSuccess("NA", "NA", txID))
 }
 
 /* -------------------------------------------------------------------------- */
@@ -868,7 +892,9 @@ func MarkBatteryStolen(stub shim.ChaincodeStubInterface, args []string) pb.Respo
 	}
 
 	fmt.Println("- end markStolen battery ")
-	return shim.Success(formatSuccess("NA", "NA", nil))
+
+	txID := stub.GetTxID()
+	return shim.Success(formatSuccess("NA", "NA", txID))
 }
 
 // MarkBatteryError marks an error on against a specific battery id.
@@ -909,7 +935,9 @@ func MarkBatteryError(stub shim.ChaincodeStubInterface, args []string) pb.Respon
 	}
 
 	fmt.Println("- end markError battery ")
-	return shim.Success(formatSuccess("NA", "NA", nil))
+
+	txID := stub.GetTxID()
+	return shim.Success(formatSuccess("NA", "NA", txID))
 }
 
 // MarkBatteryExpired will mark a specific battery as expired against a specific battery id.
@@ -988,5 +1016,7 @@ func MarkBatteryExpired(stub shim.ChaincodeStubInterface, args []string) pb.Resp
 	}
 
 	fmt.Println("- end markExpired battery ")
-	return shim.Success(formatSuccess("NA", "NA", nil))
+
+	txID := stub.GetTxID()
+	return shim.Success(formatSuccess("NA", "NA", txID))
 }
