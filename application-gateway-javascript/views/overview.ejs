@@ -30,11 +30,14 @@
     </script>
     <div class="timeline">
         <% for (var i = 1; i <= 13; i++) { %>
-          <div class="timeline-step">
+          <div class="timeline-step<%= (i === 3 || i === 6) ? (i <= locals.progress ? ' highlight-active' : ' highlight-inactive') : '' %>">
             <div class="timeline-progress<%= i <= locals.progress ? ' active' : '' %>"></div>
             <div class="timeline-label">
               <%= locals.labels[i-1] %>
             </div>
+            <% if (i === 3 || i === 6) { %>
+              <div class="b2b-operation">(B2B operation)</div>
+            <% } %>
           </div>
         <% } %>
     </div>

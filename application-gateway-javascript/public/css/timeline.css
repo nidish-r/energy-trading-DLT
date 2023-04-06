@@ -44,3 +44,27 @@
 .timeline-step:hover .timeline-description {
   display: block;
 }
+
+.highlight-active,
+.highlight-inactive {
+    border-radius: 4px;
+    padding: 8px;
+}
+
+.highlight-active {
+    border: 3px solid #01695c;
+    background-color: rgba(1, 105, 92, 0.1); /* Lighter version of the base color */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.highlight-inactive {
+    border: 3px dashed #6fc3b3;
+    background-color: rgba(111, 195, 179, 0.1); /* Lighter version of the inactive border color */
+}
+
+.b2b-operation {
+  font-style: italic;
+  font-size: 0.8em; /* Adjust the font size as needed */
+  margin-top: 4px; /* Add some space between the timeline-label and b2b-operation */
+  text-align: center;
+}
