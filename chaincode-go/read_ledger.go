@@ -20,403 +20,205 @@ under the License.
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"time"
+	"strconv"
 
-	"github.com/golang/protobuf/ptypes"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 	pb "github.com/hyperledger/fabric-protos-go/peer"
 )
 
 /* -------------------------------------------------------------------------- */
-/*                     Swapping Network Related Methods                       */
+/*                             User Read Methods                              */
 /* -------------------------------------------------------------------------- */
 
-// ReadSSNetwork returns the ssNetwork stored in the world state with given id.
-func ReadSSNetwork(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func ReadUserProfile(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	fmt.Println("starting ReadUserProfile")
 
-	var key, jsonResp string
-	var err error
-	fmt.Println("starting read")
-
+	// We expect 1 argument: the user ID.
 	if len(args) != 1 {
-		return shim.Error(formatError("NA", "NA", "Incorrect number of arguments. Expecting key of the var to query"))
+		return shim.Error("Incorrect number of arguments. Expecting 1.")
 	}
 
-	// input sanitation
-	err = sanitize_arguments(args)
+	// Parsing the user ID.
+	userID, err := strconv.ParseInt(args[0], 10, 64)
 	if err != nil {
-		return shim.Error(formatError("NA", "NA", err.Error()))
+		return shim.Error("Failed to parse User ID: " + err.Error())
 	}
 
-	key = args[0]
-	ssNetworkAsbytes, err := stub.GetState(key) //get the var from ledger
+	// Attempt to retrieve the user profile from the state using the user ID.
+	userProfileAsBytes, err := stub.GetState("User_" + strconv.FormatInt(userID, 10))
 	if err != nil {
-		jsonResp = "{\"Error\":\"Failed to get state for " + key + "\"}"
-		return shim.Error(formatError("NA", "NA", jsonResp))
+		return shim.Error("Error accessing state: " + err.Error())
+	}
+	if userProfileAsBytes == nil {
+		return shim.Error("User with ID " + strconv.FormatInt(userID, 10) + " does not exist.")
 	}
 
-	var ssNetwork SSNetwork
-	json.Unmarshal(ssNetworkAsbytes, &ssNetwork)
-	if ssNetwork.DocType != "ssNetwork" {
-		jsonResp = "{\"Error\":\"No ssNetwork was found with ssNetwork id " + key + "\"}"
-		return shim.Error(formatError("NA", "NA", jsonResp))
-	}
-
-	fmt.Println("- end read")
-	return shim.Success(formatSuccess("NA", "NA", ssNetwork))
+	fmt.Println("- end ReadUserProfile")
+	return shim.Success(userProfileAsBytes)
 }
 
-/* -------------------------------------------------------------------------- */
-/*                       Swapping Station Related Methods                     */
-/* -------------------------------------------------------------------------- */
+func ReadPlatformContract(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	fmt.Println("starting ReadPlatformContract")
 
-// ReadSwappingStation returns the swappingStation stored in the world state with given id.
-func ReadSwappingStation(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-
-	var key, jsonResp string
-	var err error
-	fmt.Println("starting read")
-
+	// We expect 1 argument: the user ID.
 	if len(args) != 1 {
-		return shim.Error(formatError("NA", "NA", "Incorrect number of arguments. Expecting key of the var to query"))
+		return shim.Error("Incorrect number of arguments. Expecting 1.")
 	}
 
-	// input sanitation
-	err = sanitize_arguments(args)
+	// Parsing the user ID.
+	userID, err := strconv.ParseInt(args[0], 10, 64)
 	if err != nil {
-		return shim.Error(formatError("NA", "NA", err.Error()))
+		return shim.Error("Failed to parse User ID: " + err.Error())
 	}
 
-	key = args[0]
-	swappingStationAsbytes, err := stub.GetState(key) //get the var from ledger
+	// Attempt to retrieve the platform contract from the state using the user ID.
+	platformContractAsBytes, err := stub.GetState("PlatformContract_" + strconv.FormatInt(userID, 10))
 	if err != nil {
-		jsonResp = "{\"Error\":\"Failed to get state for " + key + "\"}"
-		return shim.Error(formatError("NA", "NA", jsonResp))
+		return shim.Error("Error accessing state: " + err.Error())
+	}
+	if platformContractAsBytes == nil {
+		return shim.Error("Platform Contract for User with ID " + strconv.FormatInt(userID, 10) + " does not exist.")
 	}
 
-	var swappingStation SwappingStation
-	json.Unmarshal(swappingStationAsbytes, &swappingStation)
-	if swappingStation.DocType != "swappingStation" {
-		jsonResp = "{\"Error\":\"No swappingStation was found with swappingStation id " + key + "\"}"
-		return shim.Error(formatError("NA", "NA", jsonResp))
-	}
-
-	fmt.Println("- end read")
-	return shim.Success(formatSuccess("NA", "NA", swappingStation))
+	fmt.Println("- end ReadPlatformContract")
+	return shim.Success(platformContractAsBytes)
 }
 
 /* -------------------------------------------------------------------------- */
-/*                           Fleet Related Methods                            */
+/*                           Payment Read Methods                             */
 /* -------------------------------------------------------------------------- */
 
-// GenerateFleetReport generates a report for a fleet.
-func GenerateFleetReport(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	var err error
-	fmt.Println("starting GenerateFleetReport")
+func ReadPayment(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	fmt.Println("starting ReadPayment")
 
+	// We expect 1 argument: the payment ID.
 	if len(args) != 1 {
-		return shim.Error(formatError("NA", "NA", "Incorrect number of arguments. Expecting 1"))
+		return shim.Error("Incorrect number of arguments. Expecting 1.")
 	}
 
-	//input sanitation
-	err = sanitize_arguments(args)
+	// Retrieve the payment ID from the arguments.
+	paymentID := args[0]
+
+	// Attempt to retrieve the payment from the state using the payment ID.
+	paymentAsBytes, err := stub.GetState("Payment_" + paymentID)
 	if err != nil {
-		return shim.Error(formatError("NA", "NA", err.Error()))
+		return shim.Error("Error accessing state: " + err.Error())
+	}
+	if paymentAsBytes == nil {
+		return shim.Error("Payment with ID " + paymentID + " does not exist.")
 	}
 
-	id_fleet := args[0]
-
-	fleet, err := get_fleet(stub, id_fleet)
-	if err != nil {
-		fmt.Println("Fleet not found in Blockchain - " + id_fleet)
-		return shim.Error(formatError("NA", "NA", err.Error()))
-	}
-
-	// Query batteries allocated to fleet
-	queryString := fmt.Sprintf("{\"selector\":{\"docType\":\"battery\",\"allocatedToFleet\":\"%s\"}}", id_fleet)
-	queryResults, err := getQueryResultForQueryString(stub, queryString)
-	if err != nil {
-		return shim.Error(formatError("NA", "NA", err.Error()))
-	}
-
-	type FleetReport struct {
-		Id_fleet       string   `json:"id_fleet"`
-		TotalBatteries uint64   `json:"totalBatteries"`
-		BatteryIDs     []string `json:"batteryIDs"`
-	}
-
-	// Process query results
-	var batteryIDs []string
-	for _, battery := range queryResults {
-		batteryIDs = append(batteryIDs, battery.Id_battery)
-	}
-
-	fleetReport := FleetReport{
-		Id_fleet:       id_fleet,
-		TotalBatteries: fleet.TotalBatteries,
-		BatteryIDs:     batteryIDs,
-	}
-
-	reportAsBytes, _ := json.Marshal(fleetReport)
-	fmt.Println("- end GenerateFleetReport")
-	return shim.Success(reportAsBytes)
+	fmt.Println("- end ReadPayment")
+	return shim.Success(paymentAsBytes)
 }
 
-/* -------------------------------------------------------------------------- */
-/*                            User Related Methods                            */
-/* -------------------------------------------------------------------------- */
+func ReadPaymentDetail(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	fmt.Println("starting ReadPaymentDetail")
 
-// ReadUser returns the user stored in the world state with given id.
-func ReadUser(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	var key, jsonResp string
-	var err error
-	fmt.Println("starting read")
-
+	// We expect 1 argument: the ID of the PaymentDetail to retrieve.
 	if len(args) != 1 {
-		return shim.Error(formatError("NA", "NA", "Incorrect number of arguments. Expecting key of the var to query"))
+		return shim.Error("Incorrect number of arguments. Expecting 1.")
 	}
 
-	// input sanitation
-	err = sanitize_arguments(args)
+	// Parsing ID.
+	paymentDetailID, err := strconv.ParseInt(args[0], 10, 64)
 	if err != nil {
-		return shim.Error(formatError("NA", "NA", err.Error()))
+		return shim.Error("Failed to parse PaymentDetail ID: " + err.Error())
 	}
 
-	key = args[0]
-	userAsbytes, err := stub.GetState(key) //get the var from ledger
+	// Retrieve the paymentDetail from state.
+	paymentDetailAsBytes, err := stub.GetState("PaymentDetail_" + strconv.FormatInt(paymentDetailID, 10))
 	if err != nil {
-		jsonResp = "{\"Error\":\"Failed to get state for " + key + "\"}"
-		return shim.Error(formatError("NA", "NA", jsonResp))
+		return shim.Error("Failed to fetch PaymentDetail with ID " + args[0] + " from the ledger: " + err.Error())
 	}
 
-	var user User
-	json.Unmarshal(userAsbytes, &user)
-	if user.DocType != "user" {
-		jsonResp = "{\"Error\":\"No user was found with user id " + key + "\"}"
-		return shim.Error(formatError("NA", "NA", jsonResp))
-
+	if paymentDetailAsBytes == nil {
+		return shim.Error("PaymentDetail with ID " + args[0] + " not found.")
 	}
 
-	fmt.Println("- end read")
-	return shim.Success(formatSuccess("NA", "NA", user))
+	fmt.Println("- end ReadPaymentDetail")
+	return shim.Success(paymentDetailAsBytes)
 }
 
 /* -------------------------------------------------------------------------- */
-/*                          Battery Related Methods                           */
+/*                          Energy Bid Read Methods                           */
 /* -------------------------------------------------------------------------- */
 
-// ReadBattery returns the battery stored in the world state with given id.
-func ReadBattery(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	var key, jsonResp string
-	var err error
-	fmt.Println("starting read")
+func ReadOrder(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	fmt.Println("starting ReadOrder")
 
+	// We expect 1 argument: the ID of the Order to retrieve.
 	if len(args) != 1 {
-		return shim.Error(formatError("NA", "NA", "Incorrect number of arguments. Expecting key of the var to query"))
+		return shim.Error("Incorrect number of arguments. Expecting 1.")
 	}
 
-	// input sanitation
-	err = sanitize_arguments(args)
+	// Parsing ID.
+	orderID, err := strconv.ParseInt(args[0], 10, 64)
 	if err != nil {
-		return shim.Error(formatError("NA", "NA", err.Error()))
+		return shim.Error("Failed to parse Order ID: " + err.Error())
 	}
 
-	key = args[0]
-	batteryAsbytes, err := stub.GetState(key) //get the var from ledger
+	// Retrieve the order from state.
+	orderAsBytes, err := stub.GetState("Order_" + strconv.FormatInt(orderID, 10))
 	if err != nil {
-		jsonResp = "{\"Error\":\"Failed to get state for " + key + "\"}"
-		return shim.Error(formatError("NA", "NA", jsonResp))
+		return shim.Error("Failed to fetch Order with ID " + args[0] + " from the ledger: " + err.Error())
 	}
 
-	var battery Battery
-	json.Unmarshal(batteryAsbytes, &battery)
-	if battery.DocType != "battery" {
-		jsonResp = "{\"Error\":\"No battery was found with battery id " + key + "\"}"
-		return shim.Error(formatError("NA", "NA", jsonResp))
-
+	if orderAsBytes == nil {
+		return shim.Error("Order with ID " + args[0] + " not found.")
 	}
 
-	fmt.Println("- end read")
-	return shim.Success(formatSuccess("NA", "NA", battery))
+	fmt.Println("- end ReadOrder")
+	return shim.Success(orderAsBytes)
 }
 
-// ReadBatteryHistory returns the battery audit history of a given id from the world state.
-func ReadBatteryHistory(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	type AuditHistory struct {
-		TxId      string    `json:"txId"`
-		Timestamp time.Time `json:"timestamp"`
-		Value     Battery   `json:"value"`
-	}
+func ReadBidMatch(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	fmt.Println("starting ReadBidMatch")
 
-	var history []AuditHistory
-	var battery Battery
-
+	// We expect 1 argument: the ID of the BidMatch to retrieve.
 	if len(args) != 1 {
-		return shim.Error("Incorrect number of arguments. Expecting 1")
+		return shim.Error("Incorrect number of arguments. Expecting 1.")
 	}
 
-	id_battery := args[0]
-	fmt.Printf("- start getHistoryForBattery: %s\n", id_battery)
+	// Parsing ID.
+	bidMatchID := args[0]
 
-	// Get History
-	resultsIterator, err := stub.GetHistoryForKey(id_battery)
+	// Retrieve the bidMatch from state.
+	bidMatchAsBytes, err := stub.GetState("BidMatch_" + bidMatchID)
 	if err != nil {
-		return shim.Error(err.Error())
+		return shim.Error("Failed to fetch BidMatch with ID " + args[0] + " from the ledger: " + err.Error())
 	}
-	defer resultsIterator.Close()
 
-	for resultsIterator.HasNext() {
-		historicValue, err := resultsIterator.Next()
-		if err != nil {
-			return shim.Error(err.Error())
-		}
-		txID := ""
-		timestamp, err := ptypes.Timestamp(historicValue.Timestamp)
-		if err != nil {
-			return shim.Error(err.Error())
-		}
-		var tx AuditHistory
-		tx.TxId = txID                                //copy transaction id over
-		json.Unmarshal(historicValue.Value, &battery) //un stringify it aka JSON.parse()
-		if historicValue == nil {                     //battery has been deleted
-			var emptyMarble Battery
-			tx.Value = emptyMarble //copy nil battery
-		} else {
-			json.Unmarshal(historicValue.Value, &battery) //un stringify it aka JSON.parse()
-			tx.Value = battery                            //copy battery over
-			tx.Timestamp = timestamp
-			tx.TxId = historicValue.TxId
-		}
-		history = append(history, tx) //add this tx to the list
+	if bidMatchAsBytes == nil {
+		return shim.Error("BidMatch with ID " + args[0] + " not found.")
 	}
-	fmt.Printf("- getHistoryForBattery returning:\n%s", history)
 
-	//change to array of bytes
-	historyAsBytes, _ := json.Marshal(history) //convert to array of bytes
-	return shim.Success(historyAsBytes)
+	fmt.Println("- end ReadBidMatch")
+	return shim.Success(bidMatchAsBytes)
 }
 
-func getQueryResultForQueryString(stub shim.ChaincodeStubInterface, queryString string) ([]Battery, error) {
-	resultsIterator, err := stub.GetQueryResult(queryString)
-	if err != nil {
-		return nil, err
-	}
-	defer resultsIterator.Close()
+func ReadEnergyBid(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	fmt.Println("starting ReadEnergyBid")
 
-	var batteries []Battery
-	for resultsIterator.HasNext() {
-		queryResponse, err := resultsIterator.Next()
-		if err != nil {
-			return nil, err
-		}
-		var battery Battery
-		err = json.Unmarshal(queryResponse.Value, &battery)
-		if err != nil {
-			return nil, err
-		}
-		batteries = append(batteries, battery)
-	}
-	return batteries, nil
-}
-
-func GetFleetBatteries(stub shim.ChaincodeStubInterface, id_fleet string) ([]Battery, error) {
-	queryString := fmt.Sprintf("{\"selector\":{\"docType\":\"battery\",\"id_fleet\":\"%s\"}}", id_fleet)
-	queryResults, err := getQueryResultForQueryString(stub, queryString)
-	if err != nil {
-		return nil, err
-	}
-	return queryResults, nil
-}
-
-// GetChargedBatteriesBySwappingStation returns a list of charged battery IDs associated with a specific swapping station.
-func GetChargedBatteriesBySwappingStation(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	var err error
-	fmt.Println("starting GetChargedBatteriesBySwappingStation")
-
+	// We expect 1 argument: the ID of the EnergyBid to retrieve.
 	if len(args) != 1 {
-		return shim.Error(formatError("NA", "NA", "Incorrect number of arguments. Expecting 1"))
+		return shim.Error("Incorrect number of arguments. Expecting 1.")
 	}
 
-	//input sanitation
-	err = sanitize_arguments(args)
+	// Parsing ID.
+	energyBidID := args[0]
+
+	// Retrieve the energyBid from state.
+	energyBidAsBytes, err := stub.GetState("EnergyBid_" + energyBidID)
 	if err != nil {
-		return shim.Error(formatError("NA", "NA", err.Error()))
+		return shim.Error("Failed to fetch EnergyBid with ID " + args[0] + " from the ledger: " + err.Error())
 	}
 
-	id_swappingStation := args[0]
-
-	// Query batteries with the specified swapping station ID and charged status
-	queryString := fmt.Sprintf("{\"selector\":{\"docType\":\"battery\",\"DockedStation\":\"%s\",\"SoC\":{\"$gte\":80, \"$lte\":100}}}", id_swappingStation)
-	queryResults, err := getBatteriesForQueryString(stub, queryString)
-	if err != nil {
-		return shim.Error(formatError("NA", "NA", err.Error()))
+	if energyBidAsBytes == nil {
+		return shim.Error("EnergyBid with ID " + args[0] + " not found.")
 	}
 
-	var batteryIDs []string
-	for _, battery := range queryResults {
-		batteryIDs = append(batteryIDs, battery.Id_battery)
-	}
-
-	batteryIDsAsBytes, _ := json.Marshal(batteryIDs)
-	fmt.Println("- end GetChargedBatteriesBySwappingStation")
-	return shim.Success(batteryIDsAsBytes)
-}
-
-// GetChargedBatteriesBySwappingStation returns a list of charged battery IDs associated with a specific swapping station.
-func GetDischargedBatteriesBySwappingStation(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	var err error
-	fmt.Println("starting GetChargedBatteriesBySwappingStation")
-
-	if len(args) != 1 {
-		return shim.Error(formatError("NA", "NA", "Incorrect number of arguments. Expecting 1"))
-	}
-
-	//input sanitation
-	err = sanitize_arguments(args)
-	if err != nil {
-		return shim.Error(formatError("NA", "NA", err.Error()))
-	}
-
-	id_swappingStation := args[0]
-
-	// Query batteries with the specified swapping station ID and charged status
-	queryString := fmt.Sprintf("{\"selector\":{\"docType\":\"battery\",\"DockedStation\":\"%s\",\"SoC\":{\"$gte\":0, \"$lt\":80}}}", id_swappingStation)
-	queryResults, err := getBatteriesForQueryString(stub, queryString)
-	if err != nil {
-		return shim.Error(formatError("NA", "NA", err.Error()))
-	}
-
-	var batteryIDs []string
-	for _, battery := range queryResults {
-		batteryIDs = append(batteryIDs, battery.Id_battery)
-	}
-
-	batteryIDsAsBytes, _ := json.Marshal(batteryIDs)
-	fmt.Println("- end GetChargedBatteriesBySwappingStation")
-	return shim.Success(batteryIDsAsBytes)
-}
-
-func getBatteriesForQueryString(stub shim.ChaincodeStubInterface, queryString string) ([]Battery, error) {
-	resultsIterator, err := stub.GetQueryResult(queryString)
-	if err != nil {
-		return nil, err
-	}
-	defer resultsIterator.Close()
-
-	var batteries []Battery
-	for resultsIterator.HasNext() {
-		queryResponse, err := resultsIterator.Next()
-		if err != nil {
-			return nil, err
-		}
-		var battery Battery
-		err = json.Unmarshal(queryResponse.Value, &battery)
-		if err != nil {
-			return nil, err
-		}
-		batteries = append(batteries, battery)
-	}
-	return batteries, nil
+	fmt.Println("- end ReadEnergyBid")
+	return shim.Success(energyBidAsBytes)
 }
