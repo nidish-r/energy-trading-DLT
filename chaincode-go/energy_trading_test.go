@@ -45,12 +45,12 @@ func TestUpdateUserProfile(t *testing.T) {
 	t.Run("Successfully Update User Profile", func(t *testing.T) {
 		response := stub.MockInvoke("1", [][]byte{
 			[]byte("UpdateUserProfile"),
-			[]byte("1"),
-			[]byte("Prosumer"),
-			[]byte("Location 1"),
-			[]byte("MeterId 1"),
-			[]byte("Solar"),
-			[]byte("true"), // IsAdmin field
+			[]byte("1"),          // UserID field
+			[]byte("Prosumer"),   // Category field
+			[]byte("Location 1"), // Location field
+			[]byte("MeterId 1"),  // MeterID field
+			[]byte("Solar"),      // Energy Source field
+			[]byte("true"),       // IsAdmin field
 		})
 
 		// Assert the function completed successfully
@@ -100,7 +100,7 @@ func TestSignPlatformContract(t *testing.T) {
 
 	// Test Case 1: Successfully Sign Platform Contract
 	t.Run("Successfully Sign Platform Contract", func(t *testing.T) {
-		response := stub.MockInvoke("1", [][]byte{[]byte("SignPlatformContract"), []byte("12345")})
+		response := stub.MockInvoke("1", [][]byte{[]byte("SignPlatformContract"), []byte("12345")}) // UserID field
 
 		assert.Equal(t, int32(shim.OK), response.GetStatus(), fmt.Sprintf("Unexpected error: %s", response.GetMessage()))
 
@@ -287,6 +287,54 @@ func TestProcessBidMatch(t *testing.T) {
 	})
 }
 
+func TestProcessEnergyBid(t *testing.T) {
+	// Mock stub creation
+	stub := shimtest.NewMockStub("testingStub", new(SimpleChaincode))
+
+	// Test Case 1: Successfully process an EnergyBid
+	t.Run("Successfully Process EnergyBid", func(t *testing.T) {
+		response := stub.MockInvoke("1", [][]byte{
+			[]byte("ProcessEnergyBid"),
+			[]byte("EnergyBid1"), // energyBidID
+			[]byte("BidMatch1"),  // bidMatchID
+			[]byte("10.5"),       // initialBidUnits
+			[]byte("8.7"),        // acceptedBidUnits
+			[]byte("5.0"),        // buyerMeterUnit
+			[]byte("7.2"),        // sellerMeterUnit
+			[]byte("3.0"),        // buyerBroughtUnitFromSeller
+			[]byte("6.5"),        // sellerSoldUnitToBuyer
+			[]byte("4.8"),        // sellerSoldUnitToGrid
+			[]byte("9.2"),        // buyerSoldUnitToGrid
+			[]byte("2.1"),        // buyerBroughtUnitFromGrid
+			[]byte("Reason1"),    // reason
+		})
+
+		assert.Equal(t, int32(shim.OK), response.GetStatus(), fmt.Sprintf("Unexpected error: %s", response.GetMessage()))
+
+		energyBidAsBytes, err := stub.GetState("EnergyBid_EnergyBid1")
+		assert.NoError(t, err, "Error getting EnergyBid from ledger")
+
+		var energyBid EnergyBid
+		err = json.Unmarshal(energyBidAsBytes, &energyBid)
+		assert.NoError(t, err, "Error unmarshalling EnergyBid")
+
+		assert.Equal(t, "EnergyBid1", energyBid.ID, "EnergyBid ID mismatch")
+		assert.Equal(t, 10.5, energyBid.InitialBidUnits, "InitialBidUnits mismatch")
+		// Add assertions for other fields
+	})
+
+	// Test Case 2: Provide incorrect number of arguments
+	t.Run("Incorrect Number of Arguments", func(t *testing.T) {
+		response := stub.MockInvoke("2", [][]byte{
+			[]byte("ProcessEnergyBid"),
+			[]byte("1"),
+		})
+
+		assert.Equal(t, int32(shim.ERROR), response.GetStatus(), "Function unexpectedly succeeded")
+		assert.Contains(t, response.GetMessage(), "Incorrect number of arguments")
+	})
+}
+
 func TestReadOrder(t *testing.T) {
 	// Mock stub creation
 	stub := shimtest.NewMockStub("testingStub", new(SimpleChaincode))
@@ -388,50 +436,54 @@ func TestReadBidMatch(t *testing.T) {
 	})
 }
 
-func TestProcessEnergyBid(t *testing.T) {
+func TestReadEnergyBid(t *testing.T) {
 	// Mock stub creation
 	stub := shimtest.NewMockStub("testingStub", new(SimpleChaincode))
 
-	// Test Case 1: Successfully process an EnergyBid
-	t.Run("Successfully Process EnergyBid", func(t *testing.T) {
+	// Registering a new BidMatch
+	response := stub.MockInvoke("1", [][]byte{
+		[]byte("ProcessEnergyBid"),
+		[]byte("EnergyBid1"), // energyBidID
+		[]byte("BidMatch1"),  // bidMatchID
+		[]byte("10.5"),       // initialBidUnits
+		[]byte("8.7"),        // acceptedBidUnits
+		[]byte("5.0"),        // buyerMeterUnit
+		[]byte("7.2"),        // sellerMeterUnit
+		[]byte("3.0"),        // buyerBroughtUnitFromSeller
+		[]byte("6.5"),        // sellerSoldUnitToBuyer
+		[]byte("4.8"),        // sellerSoldUnitToGrid
+		[]byte("9.2"),        // buyerSoldUnitToGrid
+		[]byte("2.1"),        // buyerBroughtUnitFromGrid
+		[]byte("Reason1"),    // reason
+	})
+
+	assert.Equal(t, int32(shim.OK), response.GetStatus(), fmt.Sprintf("Unexpected error: %s", response.GetMessage()))
+
+	// Test Case 1: Successfully read a BidMatch
+	t.Run("Successfully Read a BidMatch", func(t *testing.T) {
 		response := stub.MockInvoke("1", [][]byte{
-			[]byte("ProcessEnergyBid"),
-			[]byte("EnergyBid1"), // energyBidID
-			[]byte("BidMatch1"),  // bidMatchID
-			[]byte("10.5"),       // initialBidUnits
-			[]byte("8.7"),        // acceptedBidUnits
-			[]byte("5.0"),        // buyerMeterUnit
-			[]byte("7.2"),        // sellerMeterUnit
-			[]byte("3.0"),        // buyerBroughtUnitFromSeller
-			[]byte("6.5"),        // sellerSoldUnitToBuyer
-			[]byte("4.8"),        // sellerSoldUnitToGrid
-			[]byte("9.2"),        // buyerSoldUnitToGrid
-			[]byte("2.1"),        // buyerBroughtUnitFromGrid
-			[]byte("Reason1"),    // reason
+			[]byte("ReadEnergyBid"),
+			[]byte("EnergyBid1"), // bidMatchID
 		})
 
 		assert.Equal(t, int32(shim.OK), response.GetStatus(), fmt.Sprintf("Unexpected error: %s", response.GetMessage()))
 
-		energyBidAsBytes, err := stub.GetState("EnergyBid_EnergyBid1")
-		assert.NoError(t, err, "Error getting EnergyBid from ledger")
-
 		var energyBid EnergyBid
-		err = json.Unmarshal(energyBidAsBytes, &energyBid)
+		err := json.Unmarshal(response.GetPayload(), &energyBid)
 		assert.NoError(t, err, "Error unmarshalling EnergyBid")
 
-		assert.Equal(t, "EnergyBid1", energyBid.ID, "EnergyBid ID mismatch")
-		assert.Equal(t, 10.5, energyBid.InitialBidUnits, "InitialBidUnits mismatch")
-		// Add assertions for other fields
+		assert.Equal(t, string("EnergyBid1"), energyBid.ID, "EnergyBid ID mismatch")
+		assert.Equal(t, string("BidMatch1"), energyBid.BidMatchID, "BuyerUserId mismatch")
 	})
 
-	// Test Case 2: Provide incorrect number of arguments
-	t.Run("Incorrect Number of Arguments", func(t *testing.T) {
+	// Test Case 2: Try to read a EnergyBid that doesn't exist
+	t.Run("Try to Read Nonexistent EnergyBid", func(t *testing.T) {
 		response := stub.MockInvoke("2", [][]byte{
-			[]byte("ProcessEnergyBid"),
-			[]byte("1"),
+			[]byte("ReadEnergyBid"),
+			[]byte("EnergyBid2"), // bidMatchID
 		})
 
 		assert.Equal(t, int32(shim.ERROR), response.GetStatus(), "Function unexpectedly succeeded")
-		assert.Contains(t, response.GetMessage(), "Incorrect number of arguments")
+		assert.Contains(t, response.GetMessage(), "not found")
 	})
 }
