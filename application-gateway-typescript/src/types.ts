@@ -13,3 +13,19 @@ export type Order = {
     action: number;
     userId: number;
 };
+
+// Path to org1 user private key directory.
+export type Payment = {
+    paymentID: number;
+    paymentType: string;
+    totalAmount: number;
+    paymentDetailID: number;
+    debitedFrom: number;
+    creditedTo: number;
+    totalUnitCost: number;
+    platformFee: number;
+    tokenAmount: number;
+    bidRefundAmount: number;
+    platformFeeRefundAmount: number;
+    penaltyFromSeller: number;
+};

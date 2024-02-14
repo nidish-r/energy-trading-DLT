@@ -128,7 +128,7 @@ func UpdateUserProfile(stub shim.ChaincodeStubInterface, args []string) pb.Respo
 		return shim.Success(nil)
 	} else {
 		fmt.Println("- end UpdateUser")
-		return shim.Success(nil)
+		return shim.Success([]byte(stub.GetTxID()))
 	}
 }
 
@@ -167,7 +167,7 @@ func SignPlatformContract(stub shim.ChaincodeStubInterface, args []string) pb.Re
 	}
 
 	fmt.Println("- end SignPlatformContract")
-	return shim.Success(nil)
+	return shim.Success([]byte(stub.GetTxID()))
 }
 
 /* -------------------------------------------------------------------------- */
@@ -241,7 +241,7 @@ func RecordPayment(stub shim.ChaincodeStubInterface, args []string) pb.Response 
 	}
 
 	fmt.Println("- end RecordPayment")
-	return shim.Success(nil)
+	return shim.Success([]byte(stub.GetTxID()))
 }
 
 /* -------------------------------------------------------------------------- */
@@ -343,7 +343,7 @@ func RegisterOrder(stub shim.ChaincodeStubInterface, args []string) pb.Response 
 	err = stub.PutState("Order_"+order.ID, orderAsBytes)
 
 	fmt.Println("- end RegisterOrder")
-	return shim.Success(nil)
+	return shim.Success([]byte(stub.GetTxID()))
 }
 
 func ProcessBidMatch(stub shim.ChaincodeStubInterface, args []string) pb.Response {

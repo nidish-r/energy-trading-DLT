@@ -10,7 +10,7 @@ import * as crypto from 'crypto';
 import { promises as fsp } from 'fs';
 import * as path from 'path';
 import { TextDecoder } from 'util';
-import { Order } from './types';
+import { Order, Payment } from './types';
 
 const channelName = envOrDefault('CHANNEL_NAME', 'mychannel');
 const chaincodeName = envOrDefault('CHAINCODE_NAME', 'basic');
@@ -93,6 +93,31 @@ async function main(): Promise<void> {
         // Read the order by ID
         await readOrderByID(contract, newOrder.id.toString());
 
+        // Create a new order
+        const newPayment: Payment = {
+            paymentID:  1,  
+            paymentType: "Buy",
+            totalAmount: 100,
+            paymentDetailID: 2,
+            debitedFrom: 6,
+            creditedTo: 7,
+            totalUnitCost: 10,
+            platformFee: 10,
+            tokenAmount: 50,
+            bidRefundAmount: 30,
+            platformFeeRefundAmount: 0,
+            penaltyFromSeller: 0,
+        };
+        
+        // Record the new payment
+        await RecordPayment(contract, newPayment);
+
+        // Read the payment by ID
+        await readPaymentByID(contract, newPayment.paymentID.toString());
+        
+        // Read the paymentDetail by ID
+        await readPaymentDetailByID(contract, newPayment.paymentDetailID.toString());
+
 
     } finally {
         gateway.close();
@@ -150,10 +175,54 @@ async function newSigner(): Promise<Signer> {
     console.log('*** Transaction committed successfully');
 }
 
+/**
+ * Submit a transaction synchronously, blocking until it has been committed to the ledger.
+ */
+ async function RecordPayment(contract: Contract, payment: Payment): Promise<void> {
+    console.log('\n--> Submit Transaction: RecordPayment');
+    await contract.submitTransaction(
+        'RecordPayment',
+        payment.paymentID.toString(),
+        payment.paymentType.toString(), // Assuming bidStatus is an enum value
+        payment.totalAmount.toString(), // Assuming id is the corresponding field for payment.ID
+        payment.paymentDetailID.toString(),
+        payment.debitedFrom.toString(),
+        payment.creditedTo.toString(),
+        payment.totalUnitCost.toString(),
+        payment.platformFee.toString(),
+        payment.tokenAmount.toString(),
+        payment.bidRefundAmount.toString(),
+        payment.platformFeeRefundAmount.toString(),
+        payment.penaltyFromSeller.toString() // Assuming action is an enum value
+    );
+
+    console.log('*** Transaction committed successfully');
+}
+
 async function readOrderByID(contract: Contract, orderId: string): Promise<void> {
     console.log('\n--> Evaluate Transaction: ReadOrder, function returns asset attributes');
 
     const resultBytes = await contract.evaluateTransaction('ReadOrder', orderId);
+
+    const resultJson = utf8Decoder.decode(resultBytes);
+    const result = JSON.parse(resultJson);
+    console.log('*** Result:', result);
+}
+
+async function readPaymentByID(contract: Contract, paymentId: string): Promise<void> {
+    console.log('\n--> Evaluate Transaction: ReadPayment, function returns asset attributes');
+
+    const resultBytes = await contract.evaluateTransaction('ReadPayment', paymentId);
+
+    const resultJson = utf8Decoder.decode(resultBytes);
+    const result = JSON.parse(resultJson);
+    console.log('*** Result:', result);
+}
+
+async function readPaymentDetailByID(contract: Contract, paymentDetailId: string): Promise<void> {
+    console.log('\n--> Evaluate Transaction: ReadPayment, function returns asset attributes');
+
+    const resultBytes = await contract.evaluateTransaction('ReadPaymentDetail', paymentDetailId);
 
     const resultJson = utf8Decoder.decode(resultBytes);
     const result = JSON.parse(resultJson);
