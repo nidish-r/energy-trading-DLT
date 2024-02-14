@@ -50,9 +50,18 @@ type User struct {
 }
 
 type PlatformContract struct {
-	UserID    string `json:"userId"`
-	CreatedOn int64  `json:"createdOn"`
-	UpdatedOn int64  `json:"updatedOn"`
+	UserID             string `json:"userId"`
+	SignedContractHash string `json:"signedContractHash"`
+	CreatedOn          int64  `json:"createdOn"`
+	UpdatedOn          int64  `json:"updatedOn"`
+}
+
+type TradingContract struct {
+	UserID             string `json:"userId"`
+	BidStatus          string `json:"bidStatus"`
+	SignedContractHash string `json:"signedContractHash"`
+	CreatedOn          int64  `json:"createdOn"`
+	UpdatedOn          int64  `json:"updatedOn"`
 }
 
 // ============================================================================================================================
@@ -182,6 +191,8 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return UpdateUserProfile(stub, args)
 	} else if function == "SignPlatformContract" {
 		return SignPlatformContract(stub, args)
+	} else if function == "SignTradingContract" {
+		return SignTradingContract(stub, args)
 	} else if function == "RecordPayment" {
 		return RecordPayment(stub, args)
 	} else if function == "RegisterOrder" {
@@ -194,6 +205,8 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return ReadUserProfile(stub, args)
 	} else if function == "ReadPlatformContract" {
 		return ReadPlatformContract(stub, args)
+	} else if function == "ReadTradingContract" {
+		return ReadTradingContract(stub, args)
 	} else if function == "ReadPayment" {
 		return ReadPayment(stub, args)
 	} else if function == "ReadPaymentDetail" {

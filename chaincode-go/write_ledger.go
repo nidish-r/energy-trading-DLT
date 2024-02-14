@@ -136,8 +136,8 @@ func SignPlatformContract(stub shim.ChaincodeStubInterface, args []string) pb.Re
 	fmt.Println("starting SignPlatformContract")
 
 	// We are assuming that the only argument is the user ID.
-	if len(args) != 1 {
-		return shim.Error("Incorrect number of arguments. Expecting 1 (UserID)")
+	if len(args) != 2 {
+		return shim.Error("Incorrect number of arguments. Expecting 2 (UserID)")
 	}
 
 	// Check if user exists.
@@ -150,9 +150,7 @@ func SignPlatformContract(stub shim.ChaincodeStubInterface, args []string) pb.Re
 	// Creating a new platform contract for the user.
 	var contract PlatformContract
 	contract.UserID = userID
-	if err != nil {
-		return shim.Error("Failed to convert user ID: " + err.Error())
-	}
+	contract.SignedContractHash = args[1]
 	contract.CreatedOn = time.Now().Unix()
 	contract.UpdatedOn = contract.CreatedOn
 
@@ -167,6 +165,49 @@ func SignPlatformContract(stub shim.ChaincodeStubInterface, args []string) pb.Re
 	}
 
 	fmt.Println("- end SignPlatformContract")
+	return shim.Success([]byte(stub.GetTxID()))
+}
+
+func SignTradingContract(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	fmt.Println("starting SignPlatformContract")
+
+	// We are assuming that the only argument is the user ID.
+	if len(args) != 3 {
+		return shim.Error("Incorrect number of arguments. Expecting 3 (UserID)")
+	}
+
+	// Check if user exists.
+	userID := args[0]
+	existingUserAsBytes, err := stub.GetState(userID)
+	if err != nil || existingUserAsBytes == nil {
+		return shim.Error("User with ID " + userID + " not found")
+	}
+
+	// Creating a new trading contract for the user.
+	var contract TradingContract
+	contract.UserID = userID
+	if err != nil {
+		return shim.Error("Failed to convert user ID: " + err.Error())
+	}
+	contract.SignedContractHash = args[1]
+
+	contractStatus := args[2]
+	contract.BidStatus = contractStatus
+	contract.CreatedOn = time.Now().Unix()
+	contract.UpdatedOn = contract.CreatedOn
+
+	// Store the contract in the ledger using a composite key for uniqueness.
+	// This will use "TradingContract" as a prefix followed by the user ID.
+	contractKey := "TradingContract_" + contractStatus + "_" + userID
+	fmt.Println("ContractKey " + contractKey)
+
+	contractAsBytes, _ := json.Marshal(contract)
+	err = stub.PutState(contractKey, contractAsBytes)
+	if err != nil {
+		return shim.Error("Could not store trading contract: " + err.Error())
+	}
+
+	fmt.Println("- end SignTradingContract")
 	return shim.Success([]byte(stub.GetTxID()))
 }
 

@@ -85,6 +85,36 @@ func ReadPlatformContract(stub shim.ChaincodeStubInterface, args []string) pb.Re
 	return shim.Success(platformContractAsBytes)
 }
 
+func ReadTradingContract(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	fmt.Println("starting ReadPlatformContract")
+
+	// We expect 1 argument: the user ID.
+	if len(args) != 2 {
+		return shim.Error("Incorrect number of arguments. Expecting 2.")
+	}
+
+	// Parsing the user ID.
+	userID, err := strconv.ParseInt(args[0], 10, 64)
+	if err != nil {
+		return shim.Error("Failed to parse User ID: " + err.Error())
+	}
+
+	// Attempt to retrieve the platform contract from the state using the user ID.
+	contractStatus := args[1]
+	fmt.Println("ContractKey " + "TradingContract_" + contractStatus + "_" + strconv.FormatInt(userID, 10))
+
+	tradingContractAsBytes, err := stub.GetState("TradingContract_" + contractStatus + "_" + strconv.FormatInt(userID, 10))
+	if err != nil {
+		return shim.Error("Error accessing state: " + err.Error())
+	}
+	if tradingContractAsBytes == nil {
+		return shim.Error("Trading Contract for User with ID " + strconv.FormatInt(userID, 10) + " and status " + contractStatus + " does not exist.")
+	}
+
+	fmt.Println("- end ReadPlatformContract")
+	return shim.Success(tradingContractAsBytes)
+}
+
 /* -------------------------------------------------------------------------- */
 /*                           Payment Read Methods                             */
 /* -------------------------------------------------------------------------- */
