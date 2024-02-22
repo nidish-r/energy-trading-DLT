@@ -125,11 +125,76 @@ func UpdateUserProfile(stub shim.ChaincodeStubInterface, args []string) pb.Respo
 
 	if existingUserAsBytes == nil {
 		fmt.Println("- end CreateUser")
-		return shim.Success(nil)
+		return shim.Success([]byte(stub.GetTxID()))
 	} else {
 		fmt.Println("- end UpdateUser")
 		return shim.Success([]byte(stub.GetTxID()))
 	}
+}
+
+func UpdateEnterpriseUserProfile(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	fmt.Println("starting UpdateEnterpriseUserProfile")
+
+	if len(args) != 6 {
+		return shim.Error("Incorrect number of arguments. Expecting 6")
+	}
+
+	err := sanitize_arguments(args)
+	if err != nil {
+		return shim.Error("Invalid argument: " + err.Error())
+	}
+
+	userID := args[0]
+	existingUserAsBytes, err := stub.GetState(userID)
+
+	var user EnterpriseUser // Use EnterpriseUser struct
+	if err != nil || existingUserAsBytes == nil {
+		// New user creation
+		user.CreatedOn = time.Now().Unix()
+		user.UpdatedOn = user.CreatedOn
+	} else {
+		// Existing user update
+		err = json.Unmarshal(existingUserAsBytes, &user)
+		if err != nil {
+			return shim.Error("Failed to unmarshal user: " + err.Error())
+		}
+		user.UpdatedOn = time.Now().Unix()
+	}
+
+	user.ID = userID
+	user.Category = args[1]
+	user.Location = args[2]
+
+	// Parse MeterIDs from JSON array
+	var meterIDs []string
+	err = json.Unmarshal([]byte(args[3]), &meterIDs)
+	if err != nil {
+		return shim.Error("Failed to unmarshal MeterIDs: " + err.Error())
+	}
+	user.MeterIDs = meterIDs // Assign parsed MeterIDs
+
+	user.Source = args[4]
+	isAdminStr := args[5]
+	isAdminBool, err := strconv.ParseBool(isAdminStr)
+	if err != nil {
+		return shim.Error("Failed to parse IsAdmin Bool: " + err.Error())
+	} else {
+		user.IsAdmin = isAdminBool
+	}
+
+	// Store the user in ledger
+	userAsBytes, _ := json.Marshal(user)
+	err = stub.PutState(user.ID, userAsBytes)
+	if err != nil {
+		return shim.Error("Could not store user: " + err.Error())
+	}
+
+	if existingUserAsBytes == nil {
+		fmt.Println("- end CreateEnterpriseUser")
+	} else {
+		fmt.Println("- end UpdateEnterpriseUser")
+	}
+	return shim.Success([]byte(stub.GetTxID()))
 }
 
 func SignPlatformContract(stub shim.ChaincodeStubInterface, args []string) pb.Response {

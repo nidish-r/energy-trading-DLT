@@ -39,22 +39,37 @@ func ReadUserProfile(stub shim.ChaincodeStubInterface, args []string) pb.Respons
 		return shim.Error("Incorrect number of arguments. Expecting 1.")
 	}
 
-	// Parsing the user ID.
-	userID, err := strconv.ParseInt(args[0], 10, 64)
-	if err != nil {
-		return shim.Error("Failed to parse User ID: " + err.Error())
-	}
-
 	// Attempt to retrieve the user profile from the state using the user ID.
-	userProfileAsBytes, err := stub.GetState("User_" + strconv.FormatInt(userID, 10))
+	userProfileAsBytes, err := stub.GetState(args[0])
 	if err != nil {
 		return shim.Error("Error accessing state: " + err.Error())
 	}
 	if userProfileAsBytes == nil {
-		return shim.Error("User with ID " + strconv.FormatInt(userID, 10) + " does not exist.")
+		return shim.Error("User with ID " + args[0] + " does not exist.")
 	}
 
 	fmt.Println("- end ReadUserProfile")
+	return shim.Success(userProfileAsBytes)
+}
+
+func ReadEnterpriseUserProfile(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	fmt.Println("starting ReadEnterpriseUserProfile")
+
+	// We expect 1 argument: the user ID.
+	if len(args) != 1 {
+		return shim.Error("Incorrect number of arguments. Expecting 1.")
+	}
+
+	// Attempt to retrieve the user profile from the state using the user ID.
+	userProfileAsBytes, err := stub.GetState(args[0])
+	if err != nil {
+		return shim.Error("Error accessing state: " + err.Error())
+	}
+	if userProfileAsBytes == nil {
+		return shim.Error("User with ID " + args[0] + " does not exist.")
+	}
+
+	fmt.Println("- end ReadEnterpriseUserProfile")
 	return shim.Success(userProfileAsBytes)
 }
 

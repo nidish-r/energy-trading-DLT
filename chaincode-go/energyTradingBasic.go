@@ -49,6 +49,18 @@ type User struct {
 	UpdatedOn int64  `json:"updatedOn"`
 }
 
+// Enterprise User represents the schema for the user table.
+type EnterpriseUser struct {
+	ID        string   `json:"id"`
+	Category  string   `json:"category"`
+	CreatedOn int64    `json:"createdOn"`
+	IsAdmin   bool     `json:"isAdmin"`
+	Location  string   `json:"location"`
+	MeterIDs  []string `json:"meterIds"` // Changed from MeterID to MeterIDs and now accepts a slice of strings
+	Source    string   `json:"source"`
+	UpdatedOn int64    `json:"updatedOn"`
+}
+
 type PlatformContract struct {
 	UserID             string `json:"userId"`
 	SignedContractHash string `json:"signedContractHash"`
@@ -189,6 +201,8 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return Write(stub, args)
 	} else if function == "UpdateUserProfile" {
 		return UpdateUserProfile(stub, args)
+	} else if function == "UpdateEnterpriseUserProfile" {
+		return UpdateEnterpriseUserProfile(stub, args)
 	} else if function == "SignPlatformContract" {
 		return SignPlatformContract(stub, args)
 	} else if function == "SignTradingContract" {
@@ -203,6 +217,8 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return ProcessEnergyBid(stub, args)
 	} else if function == "ReadUserProfile" {
 		return ReadUserProfile(stub, args)
+	} else if function == "ReadEnterpriseUserProfile" {
+		return ReadEnterpriseUserProfile(stub, args)
 	} else if function == "ReadPlatformContract" {
 		return ReadPlatformContract(stub, args)
 	} else if function == "ReadTradingContract" {
